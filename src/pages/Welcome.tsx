@@ -13,7 +13,6 @@ import { toast } from "react-hot-toast";
 export default function Welcome() {
   const { user } = useAuthStore();
   const location = useLocation();
-  const [isCaptchaOpen, setIsCaptchaOpen] = useState(false);
 
   const from = location.state?.from?.pathname || "/home";
 
@@ -26,32 +25,8 @@ export default function Welcome() {
     return <Navigate to={from} replace />;
   }
 
-  const handleLoginClick = () => {
-    setIsCaptchaOpen(true);
-  };
-
-  const handleCaptchaSuccess = async () => {
-    try {
-      const { user: fUser, backendData } = await loginWithGoogle();
-      useAuthStore.getState().setAuth(fUser, backendData);
-      toast.success("Đăng nhập thành công!");
-    } catch (e: any) {
-      if (e?.code === 'auth/network-request-failed') {
-        toast.error("Không thể kết nối dịch vụ Google Auth. Vui lòng thử lại.");
-      } else {
-        toast.error("Đăng nhập không thành công. Vui lòng thử lại.");
-      }
-    }
-  };
-
   return (
     <div className="min-h-screen bg-white dark:bg-black text-neutral-900 dark:text-white flex flex-col font-sans selection:bg-neutral-200 dark:selection:bg-neutral-800">
-      <CaptchaModal 
-        isOpen={isCaptchaOpen}
-        onClose={() => setIsCaptchaOpen(false)}
-        onSuccess={handleCaptchaSuccess}
-        actionLabel="đăng nhập tài khoản"
-      />
 
       {/* Header hidden as requested */}
       <header className="opacity-0 pointer-events-none p-6 flex justify-between items-center max-w-7xl mx-auto w-full">

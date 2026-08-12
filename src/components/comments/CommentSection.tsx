@@ -114,7 +114,7 @@ export default function CommentSection({
   // Submit comment or reply
   const handleAddComment = async (parentId?: string | null, parentAuthorName?: string) => {
     if (!user) {
-      toast.error("Vui lòng đăng nhập để bình luận!");
+      toast.error("Thao tác không khả dụng để bình luận!");
       return;
     }
 
@@ -283,7 +283,7 @@ export default function CommentSection({
   // Handle Comment Reaction
   const handleCommentReaction = async (comment: CommentItem, reactionType: string) => {
     if (!user) {
-      toast.error("Vui lòng đăng nhập để thả cảm xúc!");
+      toast.error("Thao tác không khả dụng để thả cảm xúc!");
       return;
     }
 
@@ -353,7 +353,7 @@ export default function CommentSection({
         <div className="flex-1 flex gap-2">
           <input
             type="text"
-            placeholder={user ? "Viết bình luận của bạn..." : "Đăng nhập bằng Google để bình luận"}
+            placeholder={user ? "Viết bình luận của bạn..." : "Viết bình luận của bạn..."}
             disabled={!user}
             value={newCommentText}
             onChange={e => setNewCommentText(e.target.value)}
@@ -509,7 +509,7 @@ export default function CommentSection({
                         </button>
                       ) : (
                         <button
-                          onClick={() => toast.error("Vui lòng đăng nhập bằng Google để trả lời!")}
+                          onClick={() => toast.error("Thao tác không khả dụng để trả lời!")}
                           className="hover:text-black dark:hover:text-white transition-colors opacity-70"
                         >
                           Trả lời

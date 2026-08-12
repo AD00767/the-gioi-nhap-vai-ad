@@ -141,26 +141,16 @@ export default function Prompts() {
 
         {/* Nút tạo bài viết (Tạo Prompt) */}
         <div>
-          {user ? (
-            <button
-              onClick={() => {
-                setPromptToEdit(null);
-                setIsCreateModalOpen(true);
-              }}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-black font-extrabold text-sm hover:bg-neutral-200 transition-transform active:scale-95 shadow-lg shrink-0"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Đăng Prompt Mới</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => toast.error("Vui lòng đăng nhập bằng Google để đăng Prompt!")}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-neutral-800 border border-neutral-700 text-white text-sm font-bold opacity-80"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Đăng nhập để tạo Prompt</span>
-            </button>
-          )}
+          <button
+            onClick={() => {
+              setPromptToEdit(null);
+              setIsCreateModalOpen(true);
+            }}
+            className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-black font-extrabold text-sm hover:bg-neutral-200 transition-transform active:scale-95 shadow-lg shrink-0"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Đăng Prompt Mới</span>
+          </button>
         </div>
       </div>
 

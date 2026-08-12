@@ -64,7 +64,7 @@ export default function CharacterCard({ character, onUpdate }: CharacterCardProp
   const handleToggleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) {
-      toast.error("Vui lòng đăng nhập để thích Character này!");
+      toast.error("Thao tác không khả dụng để thích Character này!");
       return;
     }
 
@@ -130,7 +130,7 @@ export default function CharacterCard({ character, onUpdate }: CharacterCardProp
   const handleToggleSave = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) {
-      toast.error("Vui lòng đăng nhập để lưu Character này!");
+      toast.error("Thao tác không khả dụng để lưu Character này!");
       return;
     }
 

@@ -179,7 +179,7 @@ export default function Feedbacks() {
         <button
           onClick={() => {
             if (!user) {
-              toast.error("Vui lòng đăng nhập để gửi Feedback!");
+              toast.error("Thao tác không khả dụng để gửi Feedback!");
               return;
             }
             setIsModalOpen(true);
@@ -291,7 +291,7 @@ export default function Feedbacks() {
           <button
             onClick={() => {
               if (!user) {
-                toast.error("Vui lòng đăng nhập để gửi Feedback!");
+                toast.error("Thao tác không khả dụng để gửi Feedback!");
                 return;
               }
               setIsModalOpen(true);

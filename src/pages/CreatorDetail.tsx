@@ -159,7 +159,7 @@ export default function CreatorDetail() {
 
   const handleToggleFollow = async () => {
     if (!user) {
-      toast.error("Vui lòng đăng nhập để theo dõi Creator!");
+      toast.error("Thao tác không khả dụng để theo dõi Creator!");
       return;
     }
     if (!creator || user.id === creator.id) {

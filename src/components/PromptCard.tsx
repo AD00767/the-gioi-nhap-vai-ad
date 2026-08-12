@@ -87,7 +87,7 @@ export default function PromptCard({ prompt, onEdit, onDelete, onPin, isOwner }:
   // Save / Bookmark Handler ("Nút lưu" & "Bộ đếm số lượt lưu")
   const handleToggleSave = async () => {
     if (!user) {
-      toast.error("Vui lòng đăng nhập để lưu Prompt này!");
+      toast.error("Thao tác không khả dụng để lưu Prompt này!");
       return;
     }
 

@@ -69,7 +69,7 @@ export default function CreatorCard({ creator, onUpdate }: CreatorCardProps) {
   const handleToggleFollow = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) {
-      toast.error("Vui lòng đăng nhập để theo dõi Creator này!");
+      toast.error("Thao tác không khả dụng để theo dõi Creator này!");
       return;
     }
     if (user.id === creator.id) {

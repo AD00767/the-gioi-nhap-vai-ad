@@ -19,7 +19,6 @@ export default function Layout() {
   const { user, isInitialized } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
-  const [isCaptchaOpen, setIsCaptchaOpen] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<ThemeMode>(() => {
     return (localStorage.getItem('app_theme_mode') as ThemeMode) || 'SYSTEM';
   });
@@ -150,24 +149,6 @@ export default function Layout() {
 
   if (!isInitialized) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
 
-  const handleLoginClick = () => {
-    setIsCaptchaOpen(true);
-  };
-
-  const handleCaptchaSuccess = async () => {
-    try {
-      const { user: fUser, backendData } = await loginWithGoogle();
-      useAuthStore.getState().setAuth(fUser, backendData);
-      toast.success("Đăng nhập thành công!");
-    } catch (err: any) {
-      if (err?.code === 'auth/network-request-failed') {
-        toast.error("Không thể kết nối dịch vụ Google Auth. Vui lòng thử lại.");
-      } else {
-        toast.error("Đăng nhập thất bại.");
-      }
-    }
-  };
-
   const handleLogout = async () => {
     await logout();
     useAuthStore.getState().setAuth(null, null);
@@ -207,12 +188,6 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50 flex flex-col font-sans transition-colors duration-200">
-      <CaptchaModal 
-        isOpen={isCaptchaOpen}
-        onClose={() => setIsCaptchaOpen(false)}
-        onSuccess={handleCaptchaSuccess}
-        actionLabel="đăng nhập tài khoản"
-      />
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -278,10 +253,7 @@ export default function Layout() {
                 </div>
               </div>
             ) : (
-              <button onClick={handleLoginClick} className="flex items-center gap-2 px-4 py-2 rounded-full bg-black dark:bg-white text-white dark:text-black text-sm font-medium hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors">
-                <LogIn className="w-4 h-4" />
-                <span>Đăng nhập</span>
-              </button>
+              <div></div>
             )}
           </div>
         </div>

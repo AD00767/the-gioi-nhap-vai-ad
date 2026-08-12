@@ -45,7 +45,7 @@ export default function ReportModal({ isOpen, onClose, targetType, targetId, tar
   const handleSubmittingTrigger = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      toast.error('Vui lòng đăng nhập để gửi báo cáo');
+      toast.error('Thao tác không khả dụng để gửi báo cáo');
       return;
     }
 

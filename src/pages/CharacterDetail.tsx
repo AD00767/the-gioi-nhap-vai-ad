@@ -165,7 +165,7 @@ export default function CharacterDetail() {
 
   const handleToggleLike = async () => {
     if (!user) {
-      toast.error("Vui lòng đăng nhập để thích Character!");
+      toast.error("Thao tác không khả dụng để thích Character!");
       return;
     }
     if (!character) return;
@@ -213,7 +213,7 @@ export default function CharacterDetail() {
 
   const handleToggleSave = async () => {
     if (!user) {
-      toast.error("Vui lòng đăng nhập để lưu Character!");
+      toast.error("Thao tác không khả dụng để lưu Character!");
       return;
     }
     if (!character) return;

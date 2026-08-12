@@ -287,8 +287,8 @@ export default function Profile() {
     return (
       <div className="max-w-4xl mx-auto px-4 py-16 text-center">
         <ShieldAlert className="w-16 h-16 mx-auto mb-4 text-neutral-400" />
-        <h2 className="text-xl font-bold mb-2">Chưa đăng nhập</h2>
-        <p className="text-neutral-500 text-sm mb-6">Vui lòng đăng nhập bằng tài khoản Google để xem hồ sơ người dùng.</p>
+        <h2 className="text-xl font-bold mb-2">Không khả dụng</h2>
+        <p className="text-neutral-500 text-sm mb-6">Trang này chỉ dành cho tài khoản hợp lệ.</p>
       </div>
     );
   }
