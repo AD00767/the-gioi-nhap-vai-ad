@@ -99,18 +99,11 @@ export default function Welcome() {
           >
             <Link 
               to="/home" 
-              className="group relative flex items-center justify-center gap-3 px-8 sm:px-10 py-4 rounded-xl bg-black dark:bg-white text-white dark:text-black font-black text-base sm:text-lg overflow-hidden transition-all hover:scale-[1.03] active:scale-[0.97] shadow-xl hover:shadow-neutral-400/20 dark:hover:shadow-white/10"
+              className="group relative flex items-center justify-center gap-3 px-10 py-4.5 rounded-2xl bg-black dark:bg-white text-white dark:text-black font-black text-lg sm:text-xl overflow-hidden transition-all hover:scale-[1.03] active:scale-[0.97] shadow-xl hover:shadow-neutral-400/20 dark:hover:shadow-white/10"
             >
-              <Compass className="w-5 h-5 transition-transform group-hover:rotate-45" />
-              <span>BẮT ĐẦU</span>
+              <Compass className="w-6 h-6 transition-transform group-hover:rotate-45" />
+              <span>KHÁM PHÁ NGAY</span>
             </Link>
-            <button 
-              onClick={handleLoginClick} 
-              className="flex items-center justify-center gap-3 px-8 sm:px-10 py-4 rounded-xl border-2 border-neutral-200 dark:border-neutral-800 text-black dark:text-white font-black text-base sm:text-lg hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-all hover:scale-[1.03] active:scale-[0.97]"
-            >
-              <LogIn className="w-5 h-5" />
-              <span>ĐĂNG NHẬP</span>
-            </button>
           </motion.div>
         </div>
       </main>
