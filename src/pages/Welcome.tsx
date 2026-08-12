@@ -21,10 +21,6 @@ export default function Welcome() {
     description: 'Thế giới nhập vai_AD - Khởi đầu cho mọi hành trình Roleplay trên Google AI Studio. Khám phá Character, Prompt và kết nối với cộng đồng Creator.'
   });
 
-  if (user) {
-    return <Navigate to={from} replace />;
-  }
-
   return (
     <div className="min-h-screen bg-white dark:bg-black text-neutral-900 dark:text-white flex flex-col font-sans selection:bg-neutral-200 dark:selection:bg-neutral-800">
 

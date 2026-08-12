@@ -152,7 +152,7 @@ export default function Layout() {
   const handleLogout = async () => {
     await logout();
     useAuthStore.getState().setAuth(null, null);
-    toast.success("Đã đăng xuất.");
+    toast.success("Đã khởi tạo lại.");
   };
 
   const menuItems = [
@@ -247,7 +247,7 @@ export default function Layout() {
                          </Link>
                        )}
                        <Link to="/settings" className="block px-4 py-2 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg">Cài đặt</Link>
-                       <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">Đăng xuất</button>
+                       <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">Khởi tạo lại phiên</button>
                     </div>
                   </div>
                 </div>

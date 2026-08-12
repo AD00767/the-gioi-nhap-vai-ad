@@ -122,7 +122,7 @@ export default function Settings() {
       await logout();
       useAuthStore.getState().setAuth(null, null);
       localStorage.removeItem('app_notif_settings');
-      toast.success('Đã đăng xuất thành công khỏi tất cả thiết bị!');
+      toast.success('Đã khởi tạo lại thành công khỏi tất cả thiết bị!');
       setShowLogoutModal(false);
       navigate('/welcome');
     } catch (err) {
@@ -212,7 +212,7 @@ export default function Settings() {
             }`}
           >
             <LogOut className="w-4 h-4 shrink-0" />
-            <span>Đăng xuất</span>
+            <span>Khởi tạo lại phiên</span>
           </button>
         </div>
 
@@ -668,7 +668,7 @@ export default function Settings() {
                 onClick={handleConfirmLogout}
                 className="flex-1 py-3 px-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs md:text-sm shadow-md transition-colors disabled:opacity-50"
               >
-                {loggingOut ? 'Đang xử lý...' : 'Xác nhận Đăng xuất'}
+                {loggingOut ? 'Đang xử lý...' : 'Xác nhận Khởi tạo lại phiên'}
               </button>
             </div>
           </div>
