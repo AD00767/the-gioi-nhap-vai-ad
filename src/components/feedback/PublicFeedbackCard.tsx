@@ -104,7 +104,7 @@ export default function PublicFeedbackCard({
   // Handle Reaction Selection
   const handleReaction = async (reactionType: string) => {
     if (!user) {
-      toast.error("Thao tác không khả dụng để thả cảm xúc!");
+      toast.error("Vui lòng đăng nhập để thả cảm xúc!");
       return;
     }
 

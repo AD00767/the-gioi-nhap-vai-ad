@@ -160,7 +160,7 @@ export default function CreateFeedbackModal({
     e.preventDefault();
 
     if (!user) {
-      toast.error("Thao tác không khả dụng để gửi Feedback!");
+      toast.error("Vui lòng đăng nhập để gửi Feedback!");
       return;
     }
 

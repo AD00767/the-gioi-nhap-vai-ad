@@ -265,7 +265,7 @@ export default function Contact() {
               {user && (
                 <p className="text-[11px] text-neutral-400 flex items-center gap-1">
                   <UserCheck className="w-3.5 h-3.5 text-emerald-500" />
-                  Đang truy cập với tư cách: <strong className="text-neutral-600 dark:text-neutral-300">{user.displayName}</strong>
+                  Đang đăng nhập với tư cách: <strong className="text-neutral-600 dark:text-neutral-300">{user.displayName}</strong>
                 </p>
               )}
             </div>

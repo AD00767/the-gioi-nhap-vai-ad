@@ -145,7 +145,7 @@ export default function PromptDetail() {
 
   const handleToggleSave = async () => {
     if (!user) {
-      toast.error("Thao tác không khả dụng để lưu Prompt!");
+      toast.error("Vui lòng đăng nhập để lưu Prompt!");
       return;
     }
     if (!prompt) return;

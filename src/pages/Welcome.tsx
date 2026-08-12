@@ -1,18 +1,16 @@
 import React, { useState } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import { loginWithGoogle } from "../lib/firebase";
 import { Compass, LogIn, ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
 import { useSeo } from "../hooks/useSeo";
-import CaptchaModal from "../components/CaptchaModal";
+import AuthModal from "../components/auth/AuthModal";
 import ThemeToggle from "../components/ThemeToggle";
-
-import { toast } from "react-hot-toast";
 
 export default function Welcome() {
   const { user } = useAuthStore();
   const location = useLocation();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const from = location.state?.from?.pathname || "/home";
 
@@ -21,8 +19,20 @@ export default function Welcome() {
     description: 'Thế giới nhập vai_AD - Khởi đầu cho mọi hành trình Roleplay trên Google AI Studio. Khám phá Character, Prompt và kết nối với cộng đồng Creator.'
   });
 
+  if (user) {
+    return <Navigate to={from} replace />;
+  }
+
+  const handleLoginClick = () => {
+    setIsAuthModalOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-white dark:bg-black text-neutral-900 dark:text-white flex flex-col font-sans selection:bg-neutral-200 dark:selection:bg-neutral-800">
+      <AuthModal 
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
 
       {/* Header hidden as requested */}
       <header className="opacity-0 pointer-events-none p-6 flex justify-between items-center max-w-7xl mx-auto w-full">
@@ -70,11 +80,18 @@ export default function Welcome() {
           >
             <Link 
               to="/home" 
-              className="group relative flex items-center justify-center gap-3 px-10 py-4.5 rounded-2xl bg-black dark:bg-white text-white dark:text-black font-black text-lg sm:text-xl overflow-hidden transition-all hover:scale-[1.03] active:scale-[0.97] shadow-xl hover:shadow-neutral-400/20 dark:hover:shadow-white/10"
+              className="group relative flex items-center justify-center gap-3 px-8 sm:px-10 py-4 rounded-xl bg-black dark:bg-white text-white dark:text-black font-black text-base sm:text-lg overflow-hidden transition-all hover:scale-[1.03] active:scale-[0.97] shadow-xl hover:shadow-neutral-400/20 dark:hover:shadow-white/10"
             >
-              <Compass className="w-6 h-6 transition-transform group-hover:rotate-45" />
+              <Compass className="w-5 h-5 transition-transform group-hover:rotate-45" />
               <span>BẮT ĐẦU</span>
             </Link>
+            <button 
+              onClick={handleLoginClick} 
+              className="flex items-center justify-center gap-3 px-8 sm:px-10 py-4 rounded-xl border-2 border-neutral-200 dark:border-neutral-800 text-black dark:text-white font-black text-base sm:text-lg hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-all hover:scale-[1.03] active:scale-[0.97]"
+            >
+              <LogIn className="w-5 h-5" />
+              <span>ĐĂNG NHẬP</span>
+            </button>
           </motion.div>
         </div>
       </main>

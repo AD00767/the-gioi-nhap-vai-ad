@@ -5,12 +5,7 @@ import {
   Trash2, UserMinus, Shield, MoreVertical, X, AlertCircle, History, 
   User, Ban, AlertTriangle, EyeOff, BadgeMinus, ShieldPlus, BadgeCheck
 } from 'lucide-react';
-import { 
-  collection, query, getDocs, doc, updateDoc, deleteDoc,
-  orderBy, where, addDoc 
-, limit
-} from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { getAllUsers, updateUser, getAllAuditLogs, addAuditLog, addNotification } from '../../lib/localDb';
 import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
 import { CreatorItem } from '../../types';
@@ -49,9 +44,8 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(100));
-      const snap = await getDocs(q);
-      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }) as CreatorItem));
+      const all = getAllUsers();
+      setUsers(all as any);
     } catch (err) {
       console.error("Error fetching users:", err);
       toast.error("Không thể tải danh sách người dùng.");
@@ -62,13 +56,9 @@ export default function UserManagement() {
 
   const fetchUserHistory = async (userId: string) => {
     try {
-      const q = query(
-        collection(db, 'audit_logs'), 
-        where('targetId', '==', userId),
-        orderBy('createdAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      setUserHistory(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const allLogs = getAllAuditLogs();
+      const filtered = allLogs.filter(l => l.targetId === userId);
+      setUserHistory(filtered);
     } catch (err) {
       console.error("Error fetching history:", err);
     }
@@ -77,16 +67,12 @@ export default function UserManagement() {
   const logAction = async (action: string, targetId: string, details: string) => {
     try {
       if (!currentUser) return;
-      await addDoc(collection(db, 'audit_logs'), {
-        executorId: currentUser.id,
-        executorName: currentUser.displayName,
-        executorRole: currentUser.role,
+      addAuditLog({
+        adminId: currentUser.id,
         action,
         targetId,
         targetType: 'USER',
-        details,
-        reason,
-        createdAt: new Date().toISOString()
+        reason: `${details}. Lý do: ${reason}`,
       });
     } catch (err) {
       console.error("Error logging action:", err);
@@ -110,31 +96,24 @@ export default function UserManagement() {
 
     setLoading(true);
     try {
-      const userRef = doc(db, 'users', selectedUser.id);
-      
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + parseInt(duration));
 
       switch (actionType) {
         case 'DELETE':
-          await updateDoc(userRef, { deletedAt: new Date().toISOString() });
+          updateUser(selectedUser.id, { deletedAt: new Date().toISOString() });
           await logAction('DELETE_USER', selectedUser.id, `Xóa tài khoản người dùng: ${selectedUser.displayName}`);
           toast.success("Đã xóa tài khoản.");
           break;
         case 'SUSPEND':
-          await updateDoc(userRef, {
+          updateUser(selectedUser.id, {
             isLocked: true,
             lockReason: reason,
-            lockExpiresAt: expiresAt.toISOString()
           });
           await logAction('SUSPEND_USER', selectedUser.id, `Đình chỉ tài khoản đến ${expiresAt.toLocaleDateString()}`);
           toast.success("Đã đình chỉ tài khoản.");
           break;
         case 'RESTRICT':
-          await updateDoc(userRef, {
-            restrictedActivities,
-            restrictionExpiresAt: expiresAt.toISOString()
-          });
           await logAction('RESTRICT_USER', selectedUser.id, `Giới hạn hoạt động (${restrictedActivities.join(', ')}) đến ${expiresAt.toLocaleDateString()}`);
           toast.success("Đã giới hạn hoạt động.");
           break;
@@ -143,7 +122,7 @@ export default function UserManagement() {
             toast.error("Chỉ Admin mới có quyền gỡ quyền Creator của Moderator.");
             return;
           }
-          await updateDoc(userRef, {
+          updateUser(selectedUser.id, {
             creatorStatus: false,
             role: (selectedUser.role === 'MODERATOR' || selectedUser.role === 'MOD') ? selectedUser.role : (selectedUser.role === 'ADMIN' ? 'ADMIN' : 'USER')
           });
@@ -151,29 +130,24 @@ export default function UserManagement() {
           toast.success("Đã hủy quyền Creator.");
           break;
         case 'PROMOTE_ADMIN':
-          await updateDoc(userRef, { role: 'ADMIN' });
+          updateUser(selectedUser.id, { role: 'ADMIN' });
           await logAction('PROMOTE_ADMIN', selectedUser.id, `Thăng cấp lên Admin`);
           toast.success("Đã thăng cấp Admin.");
           break;
         case 'PROMOTE_MOD':
-          await updateDoc(userRef, {
-            moderatorInviteStatus: 'PENDING',
-            updatedAt: new Date().toISOString()
-          });
-          await addDoc(collection(db, 'notifications'), {
+          updateUser(selectedUser.id, { role: 'MOD' });
+          addNotification({
             userId: selectedUser.id,
             recipientId: selectedUser.id,
             type: 'MODERATOR_INVITE',
             title: 'Lời mời làm Moderator',
-            message: `Quản trị viên ${currentUser?.displayName || 'Admin'} đã gửi lời mời bạn trở thành Moderator của hệ thống.`,
-            read: false,
-            createdAt: new Date().toISOString()
+            message: `Quản trị viên ${currentUser?.displayName || 'Admin'} đã phân quyền Moderator cho bạn.`,
           });
           await logAction('INVITE_MODERATOR', selectedUser.id, `Gửi lời mời làm Moderator`);
-          toast.success("Đã gửi lời mời làm Moderator!");
+          toast.success("Đã phân quyền Moderator!");
           break;
         case 'DEMOTE':
-          await updateDoc(userRef, { role: selectedUser.creatorStatus ? 'CREATOR' : 'USER' });
+          updateUser(selectedUser.id, { role: 'USER' });
           await logAction('DEMOTE_STAFF', selectedUser.id, `Hủy quyền quản trị/kiểm duyệt`);
           toast.success("Đã hủy quyền.");
           break;

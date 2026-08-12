@@ -1,80 +1,68 @@
-import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
-import { initializeFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, query, where, serverTimestamp } from "firebase/firestore";
-import firebaseConfig from "../../firebase-applet-config.json";
+/**
+ * Local Compatibility Module replacing Firebase SDK
+ * All authentication & data storage is performed via LocalStorage Engine in localDb.ts
+ */
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = initializeFirestore(app, {
-  experimentalAutoDetectLongPolling: true
-}, firebaseConfig.firestoreDatabaseId);
-export const googleProvider = new GoogleAuthProvider();
+import {
+  getCurrentUser,
+  loginUser,
+  registerUser,
+  setCurrentUserId,
+  getAllUsers,
+  getUserById,
+  getAllCharacters,
+  getCharacterById,
+  getAllPrompts,
+  getPromptById,
+  getAllFeedbacks,
+  getComments,
+  getAllReports,
+  getAllAuditLogs,
+} from './localDb';
 
+// Stub Firebase Auth & Firestore objects to avoid breaking old imports if any exist
+export const auth = {
+  currentUser: null as any,
+  onAuthStateChanged: (callback: any) => {
+    const user = getCurrentUser();
+    callback(user ? { uid: user.id, email: user.email, displayName: user.displayName, photoURL: user.avatar } : null);
+    return () => {};
+  },
+};
+
+export const db: any = {
+  type: 'localDb_storage',
+};
+
+export const googleProvider = {};
+
+/**
+ * Simulated Google Sign-In or quick account login
+ */
 export const loginWithGoogle = async () => {
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    const user = result.user;
-    
-    // Sync with Firestore directly if reachable
-    let backendData;
-    try {
-      let hasAdmin = false;
-      try {
-        const adminQuery = query(collection(db, "users"), where("role", "==", "ADMIN"));
-        const adminSnap = await getDocs(adminQuery);
-        hasAdmin = !adminSnap.empty;
-      } catch (err) {}
-
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
-      
-      if (!userSnap.exists()) {
-        backendData = {
-          email: user.email,
-          displayName: user.displayName || "User " + user.uid.substring(0, 5),
-          avatar: user.photoURL || "",
-          bio: "",
-          socialLinks: {},
-          role: hasAdmin ? "USER" : "ADMIN", // Grant ADMIN to the first participant if no admin exists
-          creatorStatus: false,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          deletedAt: null
-        };
-        await setDoc(userRef, backendData).catch(() => {});
-      } else {
-        backendData = userSnap.data();
-        // If no admin exists in system, auto-upgrade this user to ADMIN
-        if (!hasAdmin && backendData.role !== "ADMIN") {
-          backendData.role = "ADMIN";
-          await updateDoc(userRef, { role: "ADMIN" }).catch(() => {});
-        }
-      }
-    } catch (fsErr) {
-      console.warn("Notice: Firestore sync skipped or quota limited during login, using Google auth profile fallback:", fsErr);
-      backendData = {
-        email: user.email,
-        displayName: user.displayName || "User " + user.uid.substring(0, 5),
-        avatar: user.photoURL || "",
-        bio: "",
-        socialLinks: {},
-        role: "USER",
-        creatorStatus: false
-      };
-    }
-    
-    return { user, backendData: { id: user.uid, ...backendData } };
-  } catch (error: any) {
-    if (error?.code === 'auth/network-request-failed') {
-      console.warn("Notice: Auth network request failed (network or popup constraint):", error);
+  // Check if admin user exists or create default Google account in localStorage
+  let user = getCurrentUser();
+  if (!user) {
+    const users = getAllUsers();
+    if (users.length > 0) {
+      user = users[0];
+      setCurrentUserId(user.id);
     } else {
-      console.warn("Notice: Login error:", error);
+      const reg = registerUser('nhuochy259@gmail.com', '123456', 'Google User', 'ADMIN', true);
+      user = reg.user;
     }
-    throw error;
   }
+
+  const fUser = {
+    uid: user.id,
+    email: user.email,
+    displayName: user.displayName,
+    photoURL: user.avatar,
+  };
+
+  return { user: fUser, backendData: user };
 };
 
 export const logout = async () => {
-  await signOut(auth);
+  setCurrentUserId(null);
 };
-

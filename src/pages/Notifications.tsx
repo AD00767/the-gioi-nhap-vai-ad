@@ -353,8 +353,8 @@ export default function Notifications() {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-4">
         <Bell className="w-16 h-16 text-neutral-400 mx-auto opacity-40" />
-        <h2 className="text-2xl font-bold">Không khả dụng</h2>
-        <p className="text-neutral-500 text-sm">Tính năng thông báo chỉ dành cho tài khoản hợp lệ.</p>
+        <h2 className="text-2xl font-bold">Vui lòng đăng nhập</h2>
+        <p className="text-neutral-500 text-sm">Bạn cần đăng nhập bằng tài khoản Google để xem thông báo cá nhân.</p>
       </div>
     );
   }

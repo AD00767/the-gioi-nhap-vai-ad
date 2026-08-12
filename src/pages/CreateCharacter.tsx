@@ -35,7 +35,7 @@ export default function CreateCharacter() {
   useEffect(() => {
     // Redirect if not logged in
     if (!user) {
-      toast.error("Thao tác không khả dụng để tiếp tục.");
+      toast.error("Vui lòng đăng nhập để tiếp tục.");
       navigate('/home');
       return;
     }

@@ -51,7 +51,7 @@ export default function AppealModal({
   const handleSubmittingTrigger = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      toast.error('Thao tác không khả dụng để gửi kháng nghị');
+      toast.error('Vui lòng đăng nhập để gửi kháng nghị');
       return;
     }
     if (!description.trim()) {

@@ -229,25 +229,35 @@ export default function Characters() {
 
         {/* Nút Đăng/Tạo Character */}
         <div className="relative z-10 shrink-0">
-          {(user?.creatorStatus || user?.role === 'ADMIN') ? (
-            <button
-              onClick={() => navigate("/create-character")}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-amber-500 text-black font-extrabold text-sm hover:bg-amber-400 transition-transform active:scale-95 shadow-lg"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Tạo Character Mới</span>
-            </button>
-          ) : (
-            <div className="text-right">
+          {user ? (
+            user.creatorStatus || user.role === 'ADMIN' ? (
               <button
-                onClick={() => toast.error("Bạn cần đăng ký trở thành Creator để có quyền đăng Character!")}
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-neutral-800 border border-neutral-700 text-neutral-300 text-sm font-bold opacity-80 cursor-not-allowed"
+                onClick={() => navigate("/create-character")}
+                className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-amber-500 text-black font-extrabold text-sm hover:bg-amber-400 transition-transform active:scale-95 shadow-lg"
               >
                 <Plus className="w-5 h-5" />
-                <span>Dành riêng cho Creator</span>
+                <span>Tạo Character Mới</span>
               </button>
-              <p className="text-[11px] text-neutral-400 mt-1">Gửi yêu cầu Creator trong Hồ sơ cá nhân</p>
-            </div>
+            ) : (
+              <div className="text-right">
+                <button
+                  onClick={() => toast.error("Bạn cần đăng ký trở thành Creator để có quyền đăng Character!")}
+                  className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-neutral-800 border border-neutral-700 text-neutral-300 text-sm font-bold opacity-80 cursor-not-allowed"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>Dành riêng cho Creator</span>
+                </button>
+                <p className="text-[11px] text-neutral-400 mt-1">Gửi yêu cầu Creator trong Hồ sơ cá nhân</p>
+              </div>
+            )
+          ) : (
+            <button
+              onClick={() => toast.error("Vui lòng đăng nhập bằng Google để đăng Character!")}
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-neutral-800 border border-neutral-700 text-white text-sm font-bold opacity-80"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Đăng nhập để tạo Character</span>
+            </button>
           )}
         </div>
       </div>

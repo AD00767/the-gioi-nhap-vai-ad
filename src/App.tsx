@@ -90,7 +90,11 @@ export default function App() {
               await updateDoc(userRef, { numericId });
               userData.numericId = numericId;
             }
-
+            // Remove the auto-admin upgrade for arbitrary users
+            // if (!hasAdmin && userData.role !== 'ADMIN') {
+            //   await updateDoc(userRef, { role: 'ADMIN' });
+            //   userData.role = 'ADMIN';
+            // }
             if (userData.themePreference) {
               applyTheme(userData.themePreference);
             }
@@ -103,17 +107,17 @@ export default function App() {
             const isOwner = firebaseUser.email === 'nhuochy259@gmail.com';
             const newUserData = {
               numericId,
-              email: firebaseUser.email || null,
-              displayName: isOwner ? "Admin" : (firebaseUser.displayName || ("Người dùng #" + numericId)),
-              avatar: firebaseUser.photoURL || ("https://api.dicebear.com/7.x/avataaars/svg?seed=" + firebaseUser.uid),
-              bio: "Thành viên cộng đồng Thế giới nhập vai_AD",
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName || "User " + firebaseUser.uid.substring(0, 5),
+              avatar: firebaseUser.photoURL || "",
+              bio: "",
               socialLinks: {},
               role: isOwner ? "ADMIN" : "USER",
               creatorStatus: isOwner ? true : false,
               isLocked: false,
               strikeCount: 0,
               badges: [],
-              permissions: isOwner ? ["ALL"] : [],
+              permissions: (isOwner || !hasAdmin) ? ["ALL"] : [],
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
               deletedAt: null
@@ -126,16 +130,15 @@ export default function App() {
           }
         } catch (e) {
           console.warn("Notice: Failed to fetch user profile (using cached/default auth state):", e);
-          const isOwner = firebaseUser.email === 'nhuochy259@gmail.com';
-          const cachedRole = localStorage.getItem('cached_user_role') || (isOwner ? "ADMIN" : "USER");
-          const cachedCreator = localStorage.getItem('cached_creator_status') === 'true' || isOwner;
+          const cachedRole = localStorage.getItem('cached_user_role') || (firebaseUser.email === 'nhuochy259@gmail.com' ? "ADMIN" : "USER");
+          const cachedCreator = localStorage.getItem('cached_creator_status') === 'true' || cachedRole === 'ADMIN';
 
           const fallbackUserData = {
             id: firebaseUser.uid,
             email: firebaseUser.email,
-            displayName: firebaseUser.displayName || (isOwner ? "Admin" : ("Người dùng #" + firebaseUser.uid.substring(0, 5))),
-            avatar: firebaseUser.photoURL || ("https://api.dicebear.com/7.x/avataaars/svg?seed=" + firebaseUser.uid),
-            bio: "Thành viên cộng đồng Thế giới nhập vai_AD",
+            displayName: firebaseUser.displayName || "User " + firebaseUser.uid.substring(0, 5),
+            avatar: firebaseUser.photoURL || "",
+            bio: "",
             socialLinks: {},
             role: cachedRole,
             creatorStatus: cachedCreator,
@@ -147,15 +150,7 @@ export default function App() {
           setAuth(firebaseUser, fallbackUserData);
         }
       } else {
-        // Auto-sign in anonymously so NO visitor is required to manually log in!
-        try {
-          const { signInAnonymously } = await import('firebase/auth');
-          await signInAnonymously(auth);
-        } catch (anonErr) {
-          console.error("Auto anonymous auth failed:", anonErr);
-          setAuth(null, null);
-          setInitialized(true);
-        }
+        setAuth(null, null);
       }
       setInitialized(true);
     });

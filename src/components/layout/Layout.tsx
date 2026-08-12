@@ -15,10 +15,13 @@ import ThemeToggle from "../ThemeToggle";
 import { applyTheme, ThemeMode } from "../../lib/themeFont";
 import { parseIdQuery, lookupIdInFirebase } from "../../lib/searchUtils";
 
+import AuthModal from "../auth/AuthModal";
+
 export default function Layout() {
   const { user, isInitialized } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<ThemeMode>(() => {
     return (localStorage.getItem('app_theme_mode') as ThemeMode) || 'SYSTEM';
   });
@@ -149,9 +152,14 @@ export default function Layout() {
 
   if (!isInitialized) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
 
+  const handleLoginClick = () => {
+    setIsAuthModalOpen(true);
+  };
+
   const handleLogout = async () => {
     await logout();
-    toast.success("Đã khởi tạo lại.");
+    useAuthStore.getState().setAuth(null, null);
+    toast.success("Đã đăng xuất.");
   };
 
   const menuItems = [
@@ -169,9 +177,13 @@ export default function Layout() {
         { label: "Bảng điều khiển Creator", path: "/creator/dashboard", icon: <LayoutDashboard className="w-5 h-5 text-amber-500" /> }
       );
     }
-    if (user.role === 'ADMIN' || user.role === 'MOD' || user.role === 'MODERATOR') {
+    if (user.role === 'ADMIN') {
       menuItems.push(
         { label: "Quản trị & Kiểm duyệt", path: "/admin", icon: <ShieldAlert className="w-5 h-5 text-red-500" /> }
+      );
+    } else if (user.role === 'MOD' || user.role === 'MODERATOR') {
+      menuItems.push(
+        { label: "Moderator Panel", path: "/admin/users", icon: <ShieldCheck className="w-5 h-5 text-amber-500" /> }
       );
     }
     menuItems.push(
@@ -183,6 +195,10 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50 flex flex-col font-sans transition-colors duration-200">
+      <AuthModal 
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -225,25 +241,33 @@ export default function Layout() {
                   </button>
                   <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-900 rounded-xl shadow-lg border border-neutral-100 dark:border-neutral-800 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
                     <div className="p-2">
-                       <Link to="/profile" className="block px-4 py-2 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg">Hồ sơ người dùng</Link>
+                       <Link to="/profile" className="block px-4 py-2 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg">Hồ sơ của tôi</Link>
                        {(user.creatorStatus || user.role === 'ADMIN') && (
                          <Link to="/creator/dashboard" className="block px-4 py-2 text-sm text-amber-600 dark:text-amber-400 font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg">
                            Bảng điều khiển Creator
                          </Link>
                        )}
-                       {(user.role === 'ADMIN' || user.role === 'MOD' || user.role === 'MODERATOR') && (
+                       {user.role === 'ADMIN' && (
                          <Link to="/admin" className="block px-4 py-2 text-sm text-red-600 dark:text-red-400 font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg">
                            Quản trị & Kiểm duyệt
                          </Link>
                        )}
+                       {(user.role === 'MOD' || user.role === 'MODERATOR') && (
+                         <Link to="/admin/users" className="block px-4 py-2 text-sm text-amber-600 dark:text-amber-400 font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg">
+                           Moderator Panel
+                         </Link>
+                       )}
                        <Link to="/settings" className="block px-4 py-2 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg">Cài đặt</Link>
-                       <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">Khởi tạo lại phiên</button>
+                       <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">Đăng xuất</button>
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div></div>
+              <button onClick={handleLoginClick} className="flex items-center gap-2 px-4 py-2 rounded-full bg-black dark:bg-white text-white dark:text-black text-sm font-medium hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors">
+                <LogIn className="w-4 h-4" />
+                <span>Đăng nhập</span>
+              </button>
             )}
           </div>
         </div>

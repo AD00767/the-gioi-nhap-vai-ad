@@ -120,8 +120,9 @@ export default function Settings() {
     setLoggingOut(true);
     try {
       await logout();
+      useAuthStore.getState().setAuth(null, null);
       localStorage.removeItem('app_notif_settings');
-      toast.success('Đã khởi tạo lại thành công khỏi tất cả thiết bị!');
+      toast.success('Đã đăng xuất thành công khỏi tất cả thiết bị!');
       setShowLogoutModal(false);
       navigate('/welcome');
     } catch (err) {
@@ -211,7 +212,7 @@ export default function Settings() {
             }`}
           >
             <LogOut className="w-4 h-4 shrink-0" />
-            <span>Khởi tạo lại phiên</span>
+            <span>Đăng xuất</span>
           </button>
         </div>
 
@@ -239,7 +240,7 @@ export default function Settings() {
                 <div className="p-6 text-center bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl space-y-3">
                   <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
                   <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
-                    Tài khoản không khả dụng.
+                    Bạn chưa đăng nhập. Vui lòng đăng nhập bằng Google để xem chi tiết tài khoản.
                   </p>
                 </div>
               ) : (
@@ -584,10 +585,10 @@ export default function Settings() {
               <div className="border-b border-neutral-100 dark:border-neutral-800 pb-4 flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 text-red-600 dark:text-red-400">
-                    Bảo Mật & Khởi Tạo Lại
+                    Bảo Mật & Đăng Xuất
                   </h2>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                    Quản lý phiên làm việc và xóa dữ liệu kết nối an toàn.
+                    Quản lý phiên đăng nhập và xóa dữ liệu kết nối an toàn.
                   </p>
                 </div>
                 <div className="p-2 bg-red-500/10 rounded-2xl text-red-500">
@@ -599,7 +600,7 @@ export default function Settings() {
                 <div className="p-6 text-center bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl space-y-2">
                   <CheckCircle2 className="w-8 h-8 text-neutral-400 mx-auto" />
                   <p className="text-sm font-semibold text-neutral-600 dark:text-neutral-400">
-                    Tài khoản hiện đang không trong phiên làm việc nào.
+                    Tài khoản hiện đang không trong phiên đăng nhập nào.
                   </p>
                 </div>
               ) : (
@@ -609,10 +610,10 @@ export default function Settings() {
                       <Smartphone className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
                       <div className="space-y-1">
                         <h4 className="font-bold text-sm text-neutral-900 dark:text-neutral-100">
-                          Khởi Tạo Lại Phiên Làm Việc
+                          Đăng Xuất Khỏi Tất Cả Thiết Bị
                         </h4>
                         <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
-                          Thao tác này sẽ hủy kết nối phiên làm việc hiện tại và thu hồi token trên tất cả trình duyệt và thiết bị đã từng truy cập.
+                          Thao tác này sẽ hủy kết nối phiên làm việc hiện tại và thu hồi token ủy quyền từ Google Auth trên tất cả trình duyệt và thiết bị đã từng truy cập.
                         </p>
                       </div>
                     </div>
@@ -623,7 +624,7 @@ export default function Settings() {
                         className="px-6 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs md:text-sm shadow-md transition-all flex items-center gap-2"
                       >
                         <LogOut className="w-4 h-4" />
-                        <span>Khởi tạo lại ngay</span>
+                        <span>Đăng xuất tất cả thiết bị</span>
                       </button>
                     </div>
                   </div>
@@ -645,10 +646,10 @@ export default function Settings() {
 
             <div className="text-center space-y-2">
               <h3 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
-                Xác Nhận Khởi Tạo Lại?
+                Xác Nhận Đăng Xuất?
               </h3>
               <p className="text-xs md:text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                Bạn có chắc chắn muốn <strong className="text-red-500">khởi tạo lại phiên làm việc</strong>? Thao tác này sẽ xóa dữ liệu phiên hiện tại.
+                Bạn có chắc chắn muốn <strong className="text-red-500">đăng xuất khỏi tất cả thiết bị</strong>? Bạn sẽ cần đăng nhập lại bằng Google để tiếp tục sử dụng các tính năng cá nhân.
               </p>
             </div>
 
@@ -667,7 +668,7 @@ export default function Settings() {
                 onClick={handleConfirmLogout}
                 className="flex-1 py-3 px-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs md:text-sm shadow-md transition-colors disabled:opacity-50"
               >
-                {loggingOut ? 'Đang xử lý...' : 'Xác nhận Khởi tạo lại phiên'}
+                {loggingOut ? 'Đang xử lý...' : 'Xác nhận Đăng xuất'}
               </button>
             </div>
           </div>
