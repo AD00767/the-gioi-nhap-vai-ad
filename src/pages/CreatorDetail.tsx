@@ -4,7 +4,8 @@ import {
   Sparkles, UserCheck, UserPlus, Users, BookOpen, PenTool, ArrowLeft, Flag, AlertCircle, RefreshCw,
   Facebook, Instagram, Music, MessageSquare, ExternalLink
 } from 'lucide-react';
-import { doc, getDoc, collection, query, where, getDocs, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, query, where, serverTimestamp } from 'firebase/firestore';
+import { safeGetDoc, safeGetDocs } from '../lib/firestoreUtils';
 import { db } from '../lib/firebase';
 import { useAuthStore } from '../store/useAuthStore';
 import { CreatorItem, CharacterItem, PromptItem } from '../types';
@@ -51,7 +52,7 @@ export default function CreatorDetail() {
     try {
       // 1. Fetch user doc
       const userRef = doc(db, 'users', id);
-      const userSnap = await getDoc(userRef);
+      const userSnap = await safeGetDoc(userRef);
 
       // Allow any user who is not deleted
       if (!userSnap.exists()) {
@@ -76,7 +77,7 @@ export default function CreatorDetail() {
 
       // 2. Fetch Creator's characters
       const qChar = query(collection(db, 'characters'), where('creatorId', '==', id));
-      const snapChar = await getDocs(qChar);
+      const snapChar = await safeGetDocs(qChar);
       const charList: CharacterItem[] = [];
       let totalLikesReceived = 0;
       let totalSavesReceived = 0;
@@ -115,7 +116,7 @@ export default function CreatorDetail() {
 
       // 3. Fetch Creator's prompts
       const qPrompt = query(collection(db, 'prompts'), where('authorId', '==', id));
-      const snapPrompt = await getDocs(qPrompt);
+      const snapPrompt = await safeGetDocs(qPrompt);
       const promptList: PromptItem[] = [];
       snapPrompt.docs.forEach(d => {
         const data = d.data();

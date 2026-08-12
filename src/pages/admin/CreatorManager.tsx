@@ -102,7 +102,7 @@ export default function CreatorManager() {
           await updateDoc(idRef, {
             objectType: 'creator',
             updatedAt: serverTimestamp()
-          }).catch(err => console.warn("Failed to update global_ids mapping:", err));
+          }).catch(err => console.log("Failed to update global_ids mapping:", err));
         }
 
         // Send notification

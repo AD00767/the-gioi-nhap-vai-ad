@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   MessageSquare, Plus, Search, Filter, Globe, Lock, Mail, Inbox, Send, RefreshCw, Sparkles 
 } from 'lucide-react';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy } from 'firebase/firestore';
+import { safeGetDocs } from '../lib/firestoreUtils';
+import * as localDb from '../lib/localDb';
 import { db } from '../lib/firebase';
 import { useAuthStore } from '../store/useAuthStore';
 import { useSeo } from '../hooks/useSeo';
@@ -40,8 +42,8 @@ export default function Feedbacks() {
           collection(db, 'feedbacks'),
           where('mode', '==', 'PUBLIC')
         );
-        const snap = await getDocs(q);
-        snap.docs.forEach(docSnap => {
+        const snap = await safeGetDocs(q);
+        snap.docs.forEach((docSnap: any) => {
           const d = docSnap.data();
           if (!d.deletedAt) {
             list.push({ id: docSnap.id, ...d } as FeedbackItem);
@@ -53,8 +55,8 @@ export default function Feedbacks() {
             collection(db, 'feedbacks'),
             where('recipientId', '==', user.id)
           );
-          const snap = await getDocs(q);
-          snap.docs.forEach(docSnap => {
+          const snap = await safeGetDocs(q);
+          snap.docs.forEach((docSnap: any) => {
             const d = docSnap.data();
             if (!d.deletedAt) {
               list.push({ id: docSnap.id, ...d } as FeedbackItem);
@@ -65,8 +67,8 @@ export default function Feedbacks() {
             collection(db, 'feedbacks'),
             where('senderId', '==', user.id)
           );
-          const snap = await getDocs(q);
-          snap.docs.forEach(docSnap => {
+          const snap = await safeGetDocs(q);
+          snap.docs.forEach((docSnap: any) => {
             const d = docSnap.data();
             if (!d.deletedAt) {
               list.push({ id: docSnap.id, ...d } as FeedbackItem);
@@ -85,8 +87,8 @@ export default function Feedbacks() {
           );
 
           const [snapSent, snapReceived] = await Promise.all([
-            getDocs(qSent),
-            getDocs(qReceived)
+            safeGetDocs(qSent),
+            safeGetDocs(qReceived)
           ]);
 
           const seenIds = new Set<string>();
@@ -113,8 +115,18 @@ export default function Feedbacks() {
 
       setFeedbacks(list);
     } catch (err) {
-      console.error("Lỗi khi tải danh sách Feedback:", err);
-      toast.error("Không thể tải danh sách Feedback.");
+      console.log("Lỗi khi tải danh sách Feedback, dùng dữ liệu bộ nhớ cục bộ:", err);
+      // Fallback directly to localDb
+      const allLocal = localDb.getAllFeedbacks();
+      let filtered = allLocal.filter(f => !f.deletedAt);
+      if (activeTab === 'ALL_PUBLIC') {
+        filtered = filtered.filter(f => f.mode === 'PUBLIC');
+      } else if (user) {
+        if (activeTab === 'RECEIVED') filtered = filtered.filter(f => f.recipientId === user.id);
+        else if (activeTab === 'SENT') filtered = filtered.filter(f => f.senderId === user.id);
+        else if (activeTab === 'PRIVATE') filtered = filtered.filter(f => f.mode === 'PRIVATE' && (f.senderId === user.id || f.recipientId === user.id));
+      }
+      setFeedbacks(filtered as any[]);
     } finally {
       setLoading(false);
     }

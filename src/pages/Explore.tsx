@@ -3,7 +3,9 @@ import {
   Compass, Sparkles, User as UserIcon, PenTool, BookOpen, 
   Search, Filter, Flame, Clock, Star, ArrowRight, Tag, RefreshCw
 } from 'lucide-react';
-import { collection, query, getDocs, orderBy, limit, where, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, where, doc } from 'firebase/firestore';
+import { safeGetDocs, safeDeleteDoc } from '../lib/firestoreUtils';
+import * as localDb from '../lib/localDb';
 import { db } from '../lib/firebase';
 import { CharacterItem, PromptItem, CreatorItem } from '../types';
 import CharacterCard from '../components/CharacterCard';
@@ -50,12 +52,15 @@ export default function Explore() {
     setLoading(true);
     try {
       // 1. Fetch Characters
-      const charsSnap = await getDocs(query(collection(db, 'characters'), limit(100)));
-      const rawChars: CharacterItem[] = charsSnap.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as CharacterItem))
-        .filter(c => !c.deletedAt);
+      const charsSnap = await safeGetDocs(query(collection(db, 'characters'), limit(100)));
+      let rawChars: CharacterItem[] = charsSnap.docs
+        .map((doc: any) => ({ id: doc.id, ...doc.data() } as CharacterItem))
+        .filter((c: any) => !c.deletedAt);
 
-      // Featured Characters: sorted by likes/saves/views or pinned
+      if (rawChars.length === 0) {
+        rawChars = localDb.getAllCharacters().filter(c => !c.deletedAt) as any[];
+      }
+
       const featChars = [...rawChars].sort((a, b) => {
         if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
         const scoreA = (a.likesCount || 0) * 3 + (a.savesCount || 0) * 2 + (a.viewsCount || 0);
@@ -64,24 +69,25 @@ export default function Explore() {
       });
       setFeaturedCharacters(featChars.slice(0, 8));
 
-      // New Characters: sorted by creation timestamp
       const newChars = [...rawChars].sort((a, b) => getTimeMs(b.createdAt) - getTimeMs(a.createdAt));
       setNewCharacters(newChars.slice(0, 8));
 
-      // Extract Tags
       const tagsSet = new Set<string>();
       rawChars.forEach(c => c.tags?.forEach(t => tagsSet.add(t)));
 
       // 2. Fetch Prompts
-      const promptsSnap = await getDocs(query(collection(db, 'prompts'), limit(100)));
-      const rawPrompts: PromptItem[] = promptsSnap.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as PromptItem))
-        .filter(p => !p.deletedAt);
+      const promptsSnap = await safeGetDocs(query(collection(db, 'prompts'), limit(100)));
+      let rawPrompts: PromptItem[] = promptsSnap.docs
+        .map((doc: any) => ({ id: doc.id, ...doc.data() } as PromptItem))
+        .filter((p: any) => !p.deletedAt);
+
+      if (rawPrompts.length === 0) {
+        rawPrompts = localDb.getAllPrompts().filter(p => !p.deletedAt) as any[];
+      }
 
       rawPrompts.forEach(p => p.tags?.forEach(t => tagsSet.add(t)));
       setAllTags(Array.from(tagsSet).slice(0, 15));
 
-      // Featured Prompts: sorted by copyCount or savesCount
       const featPrompts = [...rawPrompts].sort((a, b) => {
         if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
         const scoreA = (a.copyCount || 0) * 3 + (a.savesCount || 0) * 2 + (a.viewsCount || 0);
@@ -90,17 +96,19 @@ export default function Explore() {
       });
       setFeaturedPrompts(featPrompts.slice(0, 8));
 
-      // New Prompts: sorted by creation timestamp
       const newPrs = [...rawPrompts].sort((a, b) => getTimeMs(b.createdAt) - getTimeMs(a.createdAt));
       setNewPrompts(newPrs.slice(0, 8));
 
       // 3. Fetch Creators
-      const creatorsSnap = await getDocs(query(collection(db, 'users'), limit(100)));
-      const rawCreators: CreatorItem[] = creatorsSnap.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as CreatorItem))
-        .filter(u => u.creatorStatus === true || u.role === 'ADMIN' || u.role === 'CREATOR' || (u.characterCount && u.characterCount > 0));
+      const creatorsSnap = await safeGetDocs(query(collection(db, 'users'), limit(100)));
+      let rawCreators: CreatorItem[] = creatorsSnap.docs
+        .map((doc: any) => ({ id: doc.id, ...doc.data() } as CreatorItem))
+        .filter((u: any) => u.role !== 'ADMIN' && (u.creatorStatus === true || u.role === 'CREATOR' || (u.characterCount && u.characterCount > 0)));
 
-      // Featured Creators: sorted by followerCount or characterCount
+      if (rawCreators.length === 0) {
+        rawCreators = localDb.getAllUsers().filter(u => u.role !== 'ADMIN' && (u.creatorStatus || u.role === 'CREATOR')) as any[];
+      }
+
       const featCreators = [...rawCreators].sort((a, b) => {
         const scoreA = (a.followerCount || 0) * 5 + (a.characterCount || 0) * 2;
         const scoreB = (b.followerCount || 0) * 5 + (b.characterCount || 0) * 2;
@@ -108,33 +116,21 @@ export default function Explore() {
       });
       setFeaturedCreators(featCreators.slice(0, 6));
 
-      // New Creators: sorted by creation timestamp
       const newCr = [...rawCreators].sort((a, b) => getTimeMs(b.createdAt) - getTimeMs(a.createdAt));
       setNewCreators(newCr.slice(0, 6));
 
     } catch (err) {
-      console.error("Explore load data error, loading backup/local cache:", err);
-      const cachedChars = localStorage.getItem('cached_characters_list');
-      const cachedCreators = localStorage.getItem('cached_creators_list');
-      
-      let finalChars: CharacterItem[] = [];
-      let finalCreators: CreatorItem[] = [];
-      
-      if (cachedChars) {
-        try { finalChars = JSON.parse(cachedChars); } catch (_) {}
-      }
-      if (cachedCreators) {
-        try { finalCreators = JSON.parse(cachedCreators); } catch (_) {}
-      }
-      
-      setFeaturedCharacters([]);
-      setNewCharacters([]);
-      setFeaturedCreators([]);
-      setNewCreators([]);
-      setAllTags([]);
-      setFeaturedPrompts([]);
-      setNewPrompts([]);
-      toast.error("Không thể kết nối cơ sở dữ liệu. Vui lòng kiểm tra lại mạng.");
+      console.log("Explore fallback data loading:", err);
+      const rawChars = localDb.getAllCharacters().filter(c => !c.deletedAt) as any[];
+      const rawPrompts = localDb.getAllPrompts().filter(p => !p.deletedAt) as any[];
+      const rawCreators = localDb.getAllUsers().filter(u => u.role !== 'ADMIN' && (u.creatorStatus || u.role === 'CREATOR')) as any[];
+
+      setFeaturedCharacters(rawChars.slice(0, 8));
+      setNewCharacters(rawChars.slice(0, 8));
+      setFeaturedPrompts(rawPrompts.slice(0, 8));
+      setNewPrompts(rawPrompts.slice(0, 8));
+      setFeaturedCreators(rawCreators.slice(0, 6));
+      setNewCreators(rawCreators.slice(0, 6));
     } finally {
       setLoading(false);
     }
@@ -553,7 +549,7 @@ export default function Explore() {
         onConfirm={async () => {
           if (!promptToDelete) return;
           try {
-            await deleteDoc(doc(db, 'prompts', promptToDelete));
+            await safeDeleteDoc(doc(db, 'prompts', promptToDelete));
             toast.success("Đã xóa hoàn toàn Prompt khỏi hệ thống.");
             loadData();
           } catch (e) {

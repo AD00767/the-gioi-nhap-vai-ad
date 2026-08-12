@@ -5,7 +5,8 @@ import {
   Search as SearchIcon, ArrowRight, TrendingUp, Compass, Clock, Star
 } from "lucide-react";
 import { db } from "../lib/firebase";
-import { collection, query, getDocs, where, limit, doc, deleteDoc } from "firebase/firestore";
+import { collection, query, where, limit, doc } from "firebase/firestore";
+import { safeGetDocs, safeDeleteDoc } from "../lib/firestoreUtils";
 import PublicFeedbackCard from "../components/feedback/PublicFeedbackCard";
 import CharacterCard from "../components/CharacterCard";
 import PromptCard from "../components/PromptCard";
@@ -59,7 +60,7 @@ export default function Home() {
       // 1. Fetch Characters
       try {
         console.log("Fetching characters...");
-        const charSnap = await getDocs(query(collection(db, "characters"), limit(30)));
+        const charSnap = await safeGetDocs(query(collection(db, "characters"), limit(30)));
         console.log(`Fetched ${charSnap.size} characters.`);
         allChars = charSnap.docs
           .map(doc => ({ id: doc.id, ...doc.data() } as CharacterItem))
@@ -72,13 +73,13 @@ export default function Home() {
         });
         setHotCharacters(sortedChars);
       } catch (e) {
-        console.warn("Notice: Unable to fetch characters (quota/network):", e);
+        console.log("Notice: Unable to fetch characters (quota/network):", e);
       }
 
       // 2. Fetch Prompts
       try {
         console.log("Fetching prompts...");
-        const promptSnap = await getDocs(query(collection(db, "prompts"), limit(30)));
+        const promptSnap = await safeGetDocs(query(collection(db, "prompts"), limit(30)));
         console.log(`Fetched ${promptSnap.size} prompts.`);
         allPrompts = promptSnap.docs
           .map(doc => ({ id: doc.id, ...doc.data() } as PromptItem))
@@ -91,20 +92,20 @@ export default function Home() {
         });
         setHotPrompts(sortedPrompts);
       } catch (e) {
-        console.warn("Notice: Unable to fetch prompts (quota/network):", e);
+        console.log("Notice: Unable to fetch prompts (quota/network):", e);
       }
 
       // 3. Fetch Top Creators
       try {
         let userSnap;
         try {
-          userSnap = await getDocs(query(collection(db, "users"), limit(30)));
+          userSnap = await safeGetDocs(query(collection(db, "users"), limit(30)));
         } catch (e) {
-          userSnap = await getDocs(query(collection(db, "users"), where("creatorStatus", "==", true), limit(30)));
+          userSnap = await safeGetDocs(query(collection(db, "users"), where("creatorStatus", "==", true), limit(30)));
         }
         const rawCreators: CreatorItem[] = userSnap.docs
           .map(doc => ({ id: doc.id, ...doc.data() } as CreatorItem))
-          .filter(u => u.creatorStatus === true || u.role === 'ADMIN' || u.role === 'CREATOR' || (u.characterCount && u.characterCount > 0));
+          .filter(u => u.role !== 'ADMIN' && (u.creatorStatus === true || u.role === 'CREATOR' || (u.characterCount && u.characterCount > 0)));
 
         const sortedCreators = [...rawCreators].sort((a, b) => {
           const scoreA = (a.followerCount || 0) * 5 + (a.characterCount || 0);
@@ -113,7 +114,7 @@ export default function Home() {
         });
         setTopCreators(sortedCreators);
       } catch (e) {
-        console.warn("Notice: Unable to fetch users/creators (quota/network):", e);
+        console.log("Notice: Unable to fetch users/creators (quota/network):", e);
       }
 
       // 4. Calculate Trending Tags
@@ -140,19 +141,19 @@ export default function Home() {
           where("mode", "==", "PUBLIC"),
           limit(4)
         );
-        const fbSnap = await getDocs(fbQuery);
+        const fbSnap = await safeGetDocs(fbQuery);
         console.log(`Fetched ${fbSnap.size} feedbacks.`);
         const fbList = fbSnap.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
           .filter((f: any) => !f.deletedAt);
         setPublicFeedbacks(fbList);
       } catch (e) {
-        console.warn("Notice: Unable to fetch feedbacks (quota/network):", e);
+        console.log("Notice: Unable to fetch feedbacks (quota/network):", e);
       }
 
       // No mock/fake data fallback to respect "Không Các Sử Dụng Dữ Liệu Ảo"
     } catch (e) {
-      console.warn("Notice: Home load data error:", e);
+      console.log("Notice: Home load data error:", e);
     } finally {
       setLoading(false);
     }
@@ -507,7 +508,7 @@ export default function Home() {
         onConfirm={async () => {
           if (!promptToDelete) return;
           try {
-            await deleteDoc(doc(db, 'prompts', promptToDelete));
+            await safeDeleteDoc(doc(db, 'prompts', promptToDelete));
             toast.success("Đã xóa hoàn toàn Prompt khỏi hệ thống.");
             loadHomeData();
           } catch (e) {

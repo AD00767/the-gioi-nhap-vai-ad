@@ -1,68 +1,22 @@
-/**
- * Local Compatibility Module replacing Firebase SDK
- * All authentication & data storage is performed via LocalStorage Engine in localDb.ts
- */
+import { initializeApp } from 'firebase/app';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import firebaseConfig from '../../firebase-applet-config.json';
 
-import {
-  getCurrentUser,
-  loginUser,
-  registerUser,
-  setCurrentUserId,
-  getAllUsers,
-  getUserById,
-  getAllCharacters,
-  getCharacterById,
-  getAllPrompts,
-  getPromptById,
-  getAllFeedbacks,
-  getComments,
-  getAllReports,
-  getAllAuditLogs,
-} from './localDb';
-
-// Stub Firebase Auth & Firestore objects to avoid breaking old imports if any exist
-export const auth = {
-  currentUser: null as any,
-  onAuthStateChanged: (callback: any) => {
-    const user = getCurrentUser();
-    callback(user ? { uid: user.id, email: user.email, displayName: user.displayName, photoURL: user.avatar } : null);
-    return () => {};
-  },
-};
-
-export const db: any = {
-  type: 'localDb_storage',
-};
-
-export const googleProvider = {};
+const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
 
 /**
- * Simulated Google Sign-In or quick account login
+ * Google Sign-In with popup
  */
 export const loginWithGoogle = async () => {
-  // Check if admin user exists or create default Google account in localStorage
-  let user = getCurrentUser();
-  if (!user) {
-    const users = getAllUsers();
-    if (users.length > 0) {
-      user = users[0];
-      setCurrentUserId(user.id);
-    } else {
-      const reg = registerUser('nhuochy259@gmail.com', '123456', 'Google User', 'ADMIN', true);
-      user = reg.user;
-    }
-  }
-
-  const fUser = {
-    uid: user.id,
-    email: user.email,
-    displayName: user.displayName,
-    photoURL: user.avatar,
-  };
-
-  return { user: fUser, backendData: user };
+  const result = await signInWithPopup(auth, googleProvider);
+  return { user: result.user };
 };
 
 export const logout = async () => {
-  setCurrentUserId(null);
+  await signOut(auth);
 };
+

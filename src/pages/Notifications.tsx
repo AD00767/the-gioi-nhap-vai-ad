@@ -4,8 +4,9 @@ import {
   Shield, Check, X
 } from 'lucide-react';
 import { 
-  collection, query, where, getDocs, doc, updateDoc, deleteDoc, orderBy, writeBatch, addDoc
+  collection, query, where, doc, orderBy, writeBatch
 } from 'firebase/firestore';
+import { safeGetDocs, safeAddDoc, safeUpdateDoc, safeDeleteDoc, safeGetDoc } from '../lib/firestoreUtils';
 import { db } from '../lib/firebase';
 import { useAuthStore } from '../store/useAuthStore';
 import { Link, useNavigate } from 'react-router-dom';
@@ -59,8 +60,8 @@ export default function Notifications() {
       );
 
       const [snapRecipient, snapUser] = await Promise.all([
-        getDocs(qRecipient),
-        getDocs(qUser)
+        safeGetDocs(qRecipient),
+        safeGetDocs(qUser)
       ]);
 
       const map = new Map<string, NotificationItem>();
@@ -102,7 +103,7 @@ export default function Notifications() {
   const handleMarkAsRead = async (notifId: string) => {
     try {
       const notifRef = doc(db, 'notifications', notifId);
-      await updateDoc(notifRef, { read: true });
+      await safeUpdateDoc(notifRef, { read: true });
       setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true } : n));
     } catch (err) {
       console.error("Mark as read error:", err);
@@ -119,7 +120,10 @@ export default function Notifications() {
       unread.forEach(n => {
         batch.update(doc(db, 'notifications', n.id), { read: true });
       });
-      await batch.commit();
+      await batch.commit().catch(() => {
+        // Fallback for batch commit if quota exceeded
+        unread.forEach(n => safeUpdateDoc(doc(db, 'notifications', n.id), { read: true }));
+      });
 
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       toast.success("Đã đánh dấu tất cả thông báo là đã đọc!");
@@ -133,7 +137,7 @@ export default function Notifications() {
   const handleDeleteNotif = async (notifId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await deleteDoc(doc(db, 'notifications', notifId));
+      await safeDeleteDoc(doc(db, 'notifications', notifId));
       setNotifications(prev => prev.filter(n => n.id !== notifId));
       toast.success("Đã xóa thông báo.");
     } catch (err) {
@@ -147,7 +151,7 @@ export default function Notifications() {
     if (!user) return;
     try {
       // 1. Update user role and status in Firestore
-      await updateDoc(doc(db, 'users', user.id), {
+      await safeUpdateDoc(doc(db, 'users', user.id), {
         role: 'MODERATOR',
         permissions: ['MANAGE_REPORTS', 'MANAGE_CONTENT', 'MANAGE_USERS'],
         moderatorInviteStatus: 'ACCEPTED',
@@ -155,7 +159,7 @@ export default function Notifications() {
       });
 
       // 2. Mark this notification as read & record invite status
-      await updateDoc(doc(db, 'notifications', notif.id), {
+      await safeUpdateDoc(doc(db, 'notifications', notif.id), {
         read: true,
         inviteStatus: 'ACCEPTED',
         message: 'Bạn đã chấp nhận lời mời trở thành Moderator của hệ thống.'
@@ -164,9 +168,9 @@ export default function Notifications() {
       // 3. Send notification to Admins
       try {
         const adminQuery = query(collection(db, 'users'), where('role', '==', 'ADMIN'));
-        const adminSnap = await getDocs(adminQuery);
-        const notifPromises = adminSnap.docs.map(adminDoc => 
-          addDoc(collection(db, 'notifications'), {
+        const adminSnap = await safeGetDocs(adminQuery);
+        const notifPromises = adminSnap.docs.map((adminDoc: any) => 
+          safeAddDoc(collection(db, 'notifications'), {
             userId: adminDoc.id,
             recipientId: adminDoc.id,
             type: 'MODERATOR_RESPONSE',
@@ -185,7 +189,7 @@ export default function Notifications() {
       const { setAuth } = useAuthStore.getState();
       const updatedUser = { 
         ...user, 
-        role: 'MODERATOR', 
+        role: 'MODERATOR' as const, 
         permissions: ['MANAGE_REPORTS', 'MANAGE_CONTENT', 'MANAGE_USERS'],
         moderatorInviteStatus: 'ACCEPTED' 
       };
@@ -205,13 +209,13 @@ export default function Notifications() {
     if (!user) return;
     try {
       // 1. Update user status in Firestore
-      await updateDoc(doc(db, 'users', user.id), {
+      await safeUpdateDoc(doc(db, 'users', user.id), {
         moderatorInviteStatus: 'REJECTED',
         updatedAt: new Date().toISOString()
       });
 
       // 2. Mark this notification as read & record invite status
-      await updateDoc(doc(db, 'notifications', notif.id), {
+      await safeUpdateDoc(doc(db, 'notifications', notif.id), {
         read: true,
         inviteStatus: 'REJECTED',
         message: 'Bạn đã từ chối lời mời trở thành Moderator của hệ thống.'
@@ -220,9 +224,9 @@ export default function Notifications() {
       // 3. Send notification to Admins
       try {
         const adminQuery = query(collection(db, 'users'), where('role', '==', 'ADMIN'));
-        const adminSnap = await getDocs(adminQuery);
-        const notifPromises = adminSnap.docs.map(adminDoc => 
-          addDoc(collection(db, 'notifications'), {
+        const adminSnap = await safeGetDocs(adminQuery);
+        const notifPromises = adminSnap.docs.map((adminDoc: any) => 
+          safeAddDoc(collection(db, 'notifications'), {
             userId: adminDoc.id,
             recipientId: adminDoc.id,
             type: 'MODERATOR_RESPONSE',

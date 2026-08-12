@@ -4,8 +4,9 @@ import {
   MessageSquare, Send, Trash2, Edit3, CornerDownRight, Smile, Heart, ThumbsUp, Frown, Angry, Sparkles, Check, X, ShieldAlert 
 } from 'lucide-react';
 import { 
-  collection, query, where, orderBy, getDocs, addDoc, doc, updateDoc, serverTimestamp, increment 
+  collection, query, where, orderBy, doc, serverTimestamp, increment 
 } from 'firebase/firestore';
+import { safeGetDocs, safeAddDoc, safeUpdateDoc } from '../../lib/firestoreUtils';
 import { db } from '../../lib/firebase';
 import { useAuthStore } from '../../store/useAuthStore';
 import ReportModal from '../ReportModal';
@@ -91,9 +92,9 @@ export default function CommentSection({
         where('targetId', '==', targetId),
         orderBy('createdAt', 'asc')
       );
-      const snap = await getDocs(q);
+      const snap = await safeGetDocs(q);
       const list: CommentItem[] = [];
-      snap.docs.forEach(dSnap => {
+      snap.docs.forEach((dSnap: any) => {
         const data = dSnap.data();
         if (!data.deletedAt) {
           list.push({ id: dSnap.id, ...data } as CommentItem);
@@ -139,13 +140,13 @@ export default function CommentSection({
         deletedAt: null
       };
 
-      const commentRef = await addDoc(collection(db, 'comments'), commentData);
+      const commentRef = await safeAddDoc(collection(db, 'comments'), commentData);
 
       // Increment comments count on target collection if applicable
       try {
         const collectionName = targetType === 'CHARACTER' ? 'characters' : targetType === 'PROMPT' ? 'prompts' : 'feedbacks';
         const docRef = doc(db, collectionName, targetId);
-        await updateDoc(docRef, {
+        await safeUpdateDoc(docRef, {
           commentsCount: increment(1)
         });
       } catch (e) {
@@ -157,7 +158,7 @@ export default function CommentSection({
       if (parentId) {
         const parentComment = comments.find(c => c.id === parentId);
         if (parentComment && parentComment.authorId !== user.id) {
-          await addDoc(collection(db, 'notifications'), {
+          await safeAddDoc(collection(db, 'notifications'), {
             recipientId: parentComment.authorId,
             userId: parentComment.authorId,
             senderId: user.id,
@@ -176,7 +177,7 @@ export default function CommentSection({
       } 
       // Case 2: Top level comment -> Notify Target Owner/Creator
       else if (targetOwnerId && targetOwnerId !== user.id) {
-        await addDoc(collection(db, 'notifications'), {
+        await safeAddDoc(collection(db, 'notifications'), {
           recipientId: targetOwnerId,
           userId: targetOwnerId,
           senderId: user.id,
@@ -215,7 +216,7 @@ export default function CommentSection({
 
     try {
       const cRef = doc(db, 'comments', commentId);
-      await updateDoc(cRef, {
+      await safeUpdateDoc(cRef, {
         content: trimmed,
         updatedAt: serverTimestamp()
       });
@@ -237,7 +238,7 @@ export default function CommentSection({
     try {
       const comment = comments.find(c => c.id === commentId);
       const cRef = doc(db, 'comments', commentId);
-      await updateDoc(cRef, { 
+      await safeUpdateDoc(cRef, { 
         deletedAt: new Date().toISOString(),
         deletedBy: user?.id,
         deleteReason: isStaff && user?.id !== comment?.authorId ? "Nội dung vi phạm quy chuẩn cộng đồng" : null
@@ -245,7 +246,7 @@ export default function CommentSection({
 
       // Send notification to author if deleted by staff
       if (isStaff && comment && comment.authorId !== user?.id) {
-        await addDoc(collection(db, 'notifications'), {
+        await safeAddDoc(collection(db, 'notifications'), {
           recipientId: comment.authorId,
           userId: comment.authorId,
           senderId: user?.id,
@@ -265,7 +266,7 @@ export default function CommentSection({
       try {
         const collectionName = targetType === 'CHARACTER' ? 'characters' : targetType === 'PROMPT' ? 'prompts' : 'feedbacks';
         const docRef = doc(db, collectionName, targetId);
-        await updateDoc(docRef, {
+        await safeUpdateDoc(docRef, {
           commentsCount: increment(-1)
         });
       } catch (e) {
@@ -299,13 +300,13 @@ export default function CommentSection({
       }
 
       const cRef = doc(db, 'comments', comment.id);
-      await updateDoc(cRef, {
+      await safeUpdateDoc(cRef, {
         reactions: updatedReactions
       });
 
       // Send notification if added/changed and not self
       if (updatedReactions[user.id] && comment.authorId !== user.id) {
-        await addDoc(collection(db, 'notifications'), {
+        await safeAddDoc(collection(db, 'notifications'), {
           recipientId: comment.authorId,
           userId: comment.authorId,
           senderId: user.id,

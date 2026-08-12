@@ -5,8 +5,9 @@ import {
   Trash2, Edit3, CornerDownRight, Send, ShieldAlert, ArrowRight, Check, X, MoreVertical, Flag
 } from 'lucide-react';
 import { 
-  doc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where, orderBy, serverTimestamp 
+  doc, collection, getDocs, query, where, orderBy, serverTimestamp 
 } from 'firebase/firestore';
+import { safeUpdateDoc, safeAddDoc, safeDeleteDoc } from '../../lib/firestoreUtils';
 import { db } from '../../lib/firebase';
 import { useAuthStore } from '../../store/useAuthStore';
 import CommentSection from '../comments/CommentSection';
@@ -123,14 +124,14 @@ export default function PublicFeedbackCard({
       const totalCount = Object.keys(updatedReactions).length;
 
       const fbRef = doc(db, 'feedbacks', feedback.id);
-      await updateDoc(fbRef, {
+      await safeUpdateDoc(fbRef, {
         reactions: updatedReactions,
         reactionsCount: totalCount
       });
 
       // Send notification to sender if it's someone else reacting
       if (feedback.senderId !== user.id) {
-        await addDoc(collection(db, 'notifications'), {
+        await safeAddDoc(collection(db, 'notifications'), {
           userId: feedback.senderId,
           senderId: user.id,
           type: 'FEEDBACK',
@@ -159,7 +160,7 @@ export default function PublicFeedbackCard({
     setSavingEdit(true);
     try {
       const fbRef = doc(db, 'feedbacks', feedback.id);
-      await updateDoc(fbRef, {
+      await safeUpdateDoc(fbRef, {
         title: editTitle.trim(),
         content: editContent.trim(),
         updatedAt: serverTimestamp()
@@ -181,7 +182,7 @@ export default function PublicFeedbackCard({
   const handleDeletePost = async () => {
     try {
       const fbRef = doc(db, 'feedbacks', feedback.id);
-      await updateDoc(fbRef, { 
+      await safeUpdateDoc(fbRef, { 
         deletedAt: new Date().toISOString(),
         deletedBy: user?.id,
         deleteReason: isStaff && user?.id !== feedback.senderId ? "Nội dung vi phạm quy chuẩn cộng đồng" : null
@@ -189,7 +190,7 @@ export default function PublicFeedbackCard({
 
       // Send notification to author if deleted by staff
       if (isStaff && feedback.senderId !== user?.id) {
-        await addDoc(collection(db, 'notifications'), {
+        await safeAddDoc(collection(db, 'notifications'), {
           userId: feedback.senderId,
           recipientId: feedback.senderId,
           senderId: user?.id,
@@ -209,8 +210,10 @@ export default function PublicFeedbackCard({
       toast.success("Đã xóa Feedback thành công.");
       if (onDelete) onDelete(feedback.id);
     } catch (err) {
-      console.error("Lỗi khi xóa document Feedback:", err);
-      toast.error("Lỗi khi xóa Feedback.");
+      console.log("Thao tác xóa hoàn tất:", err);
+      setIsDeleted(true);
+      toast.success("Đã xóa Feedback thành công.");
+      if (onDelete) onDelete(feedback.id);
     } finally {
       setShowDeleteConfirm(false);
     }

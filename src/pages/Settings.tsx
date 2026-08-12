@@ -137,8 +137,8 @@ export default function Settings() {
   const getFormattedJoinDate = () => {
     if (!user) return 'Chưa cập nhật';
     if (user.createdAt) {
-      if (user.createdAt.toDate) {
-        return user.createdAt.toDate().toLocaleDateString('vi-VN', { year: 'numeric', month: 'long', day: 'numeric' });
+      if (typeof (user.createdAt as any)?.toDate === 'function') {
+        return (user.createdAt as any).toDate().toLocaleDateString('vi-VN', { year: 'numeric', month: 'long', day: 'numeric' });
       }
       if (typeof user.createdAt === 'string' || typeof user.createdAt === 'number') {
         return new Date(user.createdAt).toLocaleDateString('vi-VN', { year: 'numeric', month: 'long', day: 'numeric' });

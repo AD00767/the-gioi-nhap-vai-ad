@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Search, UserCheck, Flame, Clock, Award, RefreshCw } from 'lucide-react';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, limit } from 'firebase/firestore';
+import { safeGetDocs } from '../lib/firestoreUtils';
+import * as localDb from '../lib/localDb';
 import { db } from '../lib/firebase';
 import { useSeo } from '../hooks/useSeo';
 import { CreatorItem } from '../types';
@@ -28,77 +30,27 @@ export default function Creators() {
   const fetchCreators = async () => {
     setLoading(true);
     try {
-      let snap;
-      try {
-        snap = await getDocs(query(collection(db, 'users'), where('creatorStatus', '==', true), limit(50)));
-      } catch (e) {
-        const q = query(collection(db, 'users'), where('creatorStatus', '==', true), limit(50));
-        snap = await getDocs(q);
-      }
+      const q = query(collection(db, 'users'), where('creatorStatus', '==', true), limit(50));
+      const snap = await safeGetDocs(q);
 
       const list: CreatorItem[] = [];
-      snap.docs.forEach(docSnap => {
+      snap.docs.forEach((docSnap: any) => {
         const data = docSnap.data();
-        if (data.creatorStatus === true || data.role === 'ADMIN' || data.role === 'CREATOR' || (data.characterCount && data.characterCount > 0)) {
+        if (data.role !== 'ADMIN' && (data.creatorStatus === true || data.role === 'CREATOR' || (data.characterCount && data.characterCount > 0))) {
           list.push({ id: docSnap.id, ...data } as CreatorItem);
         }
       });
 
-      setCreators(list);
-      localStorage.setItem('cached_creators_list', JSON.stringify(list));
-    } catch (err) {
-      console.error("Lỗi khi tải danh sách Creator, khôi phục từ bộ nhớ đệm:", err);
-      const cached = localStorage.getItem('cached_creators_list');
-      if (cached) {
-        try {
-          const list = JSON.parse(cached);
-          setCreators(list);
-          toast.success("Đang hiển thị dữ liệu Creator từ bộ nhớ đệm (Offline).");
-        } catch (parseErr) {
-          console.error("Lỗi parse cache:", parseErr);
-        }
+      if (list.length === 0) {
+        const allLocal = localDb.getAllUsers().filter(u => u.role !== 'ADMIN' && (u.creatorStatus || u.role === 'CREATOR'));
+        setCreators(allLocal as any[]);
       } else {
-        const fallbackCreators: CreatorItem[] = [
-          {
-            id: 'creator_01',
-            displayName: 'Trần Minh Quân',
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Quân',
-            bio: 'Nhà phát triển prompt và cốt truyện phiêu lưu thế giới mở.',
-            creatorStatus: true,
-            role: 'CREATOR',
-            characterCount: 15,
-            promptCount: 8,
-            followerCount: 245,
-            numericId: '100200300'
-          },
-          {
-            id: 'creator_02',
-            displayName: 'Nguyễn Thị Hoa',
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Hoa',
-            bio: 'Chuyên sáng tác nhân vật học đường ngọt ngào và lãng mạn.',
-            creatorStatus: true,
-            role: 'CREATOR',
-            characterCount: 12,
-            promptCount: 4,
-            followerCount: 189,
-            numericId: '100200301'
-          },
-          {
-            id: 'creator_03',
-            displayName: 'Admin_TheGioiNhapVai',
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin',
-            bio: 'Admin hệ thống Thế giới nhập vai AD.',
-            creatorStatus: true,
-            role: 'ADMIN',
-            characterCount: 20,
-            promptCount: 15,
-            followerCount: 1500,
-            numericId: '100000001'
-          }
-        ];
-        setCreators(fallbackCreators);
-        toast("Không kết nối được dữ liệu. Sử dụng dữ liệu mẫu hệ thống.", { icon: '⚠️' });
+        setCreators(list);
       }
+    } catch (err) {
+      console.log("Dùng dữ liệu Creator từ bộ nhớ cục bộ:", err);
+      const allLocal = localDb.getAllUsers().filter(u => u.role !== 'ADMIN' && (u.creatorStatus || u.role === 'CREATOR'));
+      setCreators(allLocal as any[]);
     } finally {
       setLoading(false);
     }

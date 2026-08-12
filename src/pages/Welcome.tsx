@@ -1,16 +1,15 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import { Compass, LogIn, ArrowRight } from "lucide-react";
+import { loginWithGoogle } from "../lib/firebase";
+import { Compass, LogIn } from "lucide-react";
 import { motion } from "motion/react";
 import { useSeo } from "../hooks/useSeo";
-import AuthModal from "../components/auth/AuthModal";
-import ThemeToggle from "../components/ThemeToggle";
+import toast from "react-hot-toast";
 
 export default function Welcome() {
   const { user } = useAuthStore();
   const location = useLocation();
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const from = location.state?.from?.pathname || "/home";
 
@@ -23,17 +22,22 @@ export default function Welcome() {
     return <Navigate to={from} replace />;
   }
 
-  const handleLoginClick = () => {
-    setIsAuthModalOpen(true);
+  const handleLoginClick = async () => {
+    try {
+      await loginWithGoogle();
+      toast.success("Đăng nhập bằng Google thành công!");
+    } catch (e: any) {
+      if (e?.code === 'auth/popup-closed-by-user') return;
+      if (e?.code === 'auth/network-request-failed') {
+        toast.error("Không thể kết nối dịch vụ Google Auth. Vui lòng thử lại.");
+      } else {
+        toast.error("Đăng nhập không thành công. Vui lòng thử lại.");
+      }
+    }
   };
 
   return (
     <div className="min-h-screen bg-white dark:bg-black text-neutral-900 dark:text-white flex flex-col font-sans selection:bg-neutral-200 dark:selection:bg-neutral-800">
-      <AuthModal 
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-      />
-
       {/* Header hidden as requested */}
       <header className="opacity-0 pointer-events-none p-6 flex justify-between items-center max-w-7xl mx-auto w-full">
         <div className="font-bold text-2xl tracking-tighter uppercase">Thế Giới Nhập Vai AD</div>

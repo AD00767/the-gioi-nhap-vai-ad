@@ -7,7 +7,8 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from './lib/firebase';
-import { doc, getDoc, updateDoc, collection, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, query, where, serverTimestamp } from 'firebase/firestore';
+import { safeGetDoc, safeGetDocs, safeUpdateDoc } from './lib/firestoreUtils';
 import { useAuthStore } from './store/useAuthStore';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -51,11 +52,11 @@ export default function App() {
       if (firebaseUser) {
         try {
           const userRef = doc(db, 'users', firebaseUser.uid);
-          const userSnap = await getDoc(userRef);
+          const userSnap = await safeGetDoc(userRef);
 
           // Check if any admin exists in the system
           const adminQuery = query(collection(db, "users"), where("role", "==", "ADMIN"));
-          const adminSnap = await getDocs(adminQuery);
+          const adminSnap = await safeGetDocs(adminQuery);
           const hasAdmin = !adminSnap.empty;
 
           if (userSnap.exists()) {
@@ -78,7 +79,7 @@ export default function App() {
             
             // Auto-upgrade owner to ADMIN and creator if they aren't already
             if (isOwner && (userData.role !== 'ADMIN' || userData.creatorStatus !== true)) {
-              await updateDoc(userRef, { role: 'ADMIN', creatorStatus: true });
+              await safeUpdateDoc(userRef, { role: 'ADMIN', creatorStatus: true });
               userData.role = 'ADMIN';
               userData.creatorStatus = true;
             }
@@ -87,12 +88,12 @@ export default function App() {
             if (!userData.numericId || String(userData.numericId).length !== 9) {
               const { generateUniqueId } = await import('./lib/generateId');
               const numericId = await generateUniqueId(db, userData.creatorStatus ? 'creator' : 'user', firebaseUser.uid);
-              await updateDoc(userRef, { numericId });
+              await safeUpdateDoc(userRef, { numericId });
               userData.numericId = numericId;
             }
             // Remove the auto-admin upgrade for arbitrary users
             // if (!hasAdmin && userData.role !== 'ADMIN') {
-            //   await updateDoc(userRef, { role: 'ADMIN' });
+            //   await safeUpdateDoc(userRef, { role: 'ADMIN' });
             //   userData.role = 'ADMIN';
             // }
             if (userData.themePreference) {
@@ -122,19 +123,20 @@ export default function App() {
               updatedAt: serverTimestamp(),
               deletedAt: null
             };
-            await updateDoc(userRef, newUserData).catch(async () => {
+            await safeUpdateDoc(userRef, newUserData).catch(async () => {
               const { setDoc } = await import('firebase/firestore');
               await setDoc(userRef, newUserData);
             });
             setAuth(firebaseUser, { id: firebaseUser.uid, ...newUserData } as any);
           }
         } catch (e) {
-          console.warn("Notice: Failed to fetch user profile (using cached/default auth state):", e);
+          console.log("Notice: Failed to fetch user profile (using cached/default auth state):", e);
           const cachedRole = localStorage.getItem('cached_user_role') || (firebaseUser.email === 'nhuochy259@gmail.com' ? "ADMIN" : "USER");
           const cachedCreator = localStorage.getItem('cached_creator_status') === 'true' || cachedRole === 'ADMIN';
 
           const fallbackUserData = {
             id: firebaseUser.uid,
+            numericId: "USR-" + Math.floor(1000 + Math.random() * 9000),
             email: firebaseUser.email,
             displayName: firebaseUser.displayName || "User " + firebaseUser.uid.substring(0, 5),
             avatar: firebaseUser.photoURL || "",
@@ -145,7 +147,10 @@ export default function App() {
             isLocked: false,
             strikeCount: 0,
             badges: [],
-            permissions: cachedRole === 'ADMIN' ? ["ALL"] : []
+            permissions: cachedRole === 'ADMIN' ? ["ALL"] : [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            deletedAt: null
           };
           setAuth(firebaseUser, fallbackUserData);
         }

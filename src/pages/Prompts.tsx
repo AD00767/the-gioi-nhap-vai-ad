@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   PenTool, Search, Plus, Sparkles, Filter, RefreshCw
 } from 'lucide-react';
-import { collection, query, getDocs, orderBy, where, doc, deleteDoc, limit } from 'firebase/firestore';
+import { collection, query, orderBy, where, doc, limit } from 'firebase/firestore';
+import { safeGetDocs, safeDeleteDoc } from '../lib/firestoreUtils';
+import * as localDb from '../lib/localDb';
 import { db } from '../lib/firebase';
 import { useAuthStore } from '../store/useAuthStore';
 import { useSeo } from '../hooks/useSeo';
@@ -38,10 +40,10 @@ export default function Prompts() {
     setLoading(true);
     try {
       const q = query(collection(db, 'prompts'), orderBy('createdAt', 'desc'), limit(100));
-      const snap = await getDocs(q);
+      const snap = await safeGetDocs(q);
       const list: PromptItem[] = [];
 
-      snap.docs.forEach(docSnap => {
+      snap.docs.forEach((docSnap: any) => {
         const data = docSnap.data();
         if (!data.deletedAt) {
           list.push({ id: docSnap.id, ...data } as PromptItem);
@@ -50,8 +52,9 @@ export default function Prompts() {
 
       setPrompts(list);
     } catch (err) {
-      console.error("Lỗi khi tải danh sách Prompt:", err);
-      toast.error("Không thể tải danh sách Prompt.");
+      console.log("Lỗi khi tải danh sách Prompt, dùng bộ nhớ cục bộ:", err);
+      const local = localDb.getAllPrompts().filter(p => !p.deletedAt);
+      setPrompts(local as PromptItem[]);
     } finally {
       setLoading(false);
     }
@@ -292,7 +295,7 @@ export default function Prompts() {
         onConfirm={async () => {
           if (!promptToDelete) return;
           try {
-            await deleteDoc(doc(db, 'prompts', promptToDelete));
+            await safeDeleteDoc(doc(db, 'prompts', promptToDelete));
             toast.success("Đã xóa hoàn toàn Prompt khỏi hệ thống.");
             fetchPrompts();
           } catch (e) {

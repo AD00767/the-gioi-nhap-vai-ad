@@ -44,7 +44,7 @@ export default function CreatorCard({ creator, onUpdate }: CreatorCardProps) {
         setFollowerCount(stats.followerCount);
       }
     }).catch(err => {
-      console.warn("Notice: Using fallback creator stats:", err);
+      console.log("Notice: Using fallback creator stats:", err);
     });
 
     return () => { isMounted = false; };

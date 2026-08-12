@@ -3,7 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   Heart, Bookmark, Eye, ExternalLink, Sparkles, User as UserIcon, Tag, MessageSquare, ArrowLeft, Flag, AlertCircle, Trash2, PenTool, Copy, Quote, X
 } from 'lucide-react';
-import { doc, getDoc, updateDoc, increment, collection, addDoc, query, where, getDocs, deleteDoc, serverTimestamp, limit } from 'firebase/firestore';
+import { doc, increment, collection, query, where, serverTimestamp, limit } from 'firebase/firestore';
+import { safeGetDoc, safeGetDocs, safeAddDoc, safeUpdateDoc, safeDeleteDoc } from '../lib/firestoreUtils';
 import { db } from '../lib/firebase';
 import { useAuthStore } from '../store/useAuthStore';
 import { CharacterItem } from '../types';
@@ -54,7 +55,7 @@ export default function CharacterDetail() {
 
     try {
       const docRef = doc(db, 'characters', id);
-      const snap = await getDoc(docRef);
+      const snap = await safeGetDoc(docRef);
 
       if (!snap.exists()) {
         setError(true);
@@ -83,7 +84,7 @@ export default function CharacterDetail() {
         setViewsCount((item.viewsCount || 0) + 1);
         localStorage.setItem(storageKey, now.toString());
         try {
-          await updateDoc(docRef, { viewsCount: increment(1) });
+          await safeUpdateDoc(docRef, { viewsCount: increment(1) });
         } catch (e) {
           console.error("View count update error:", e);
         }
@@ -107,7 +108,7 @@ export default function CharacterDetail() {
   const fetchRelated = async (currentChar: CharacterItem) => {
     try {
       const q = query(collection(db, 'characters'), limit(100));
-      const snap = await getDocs(q);
+      const snap = await safeGetDocs(q);
       const list: CharacterItem[] = [];
 
       snap.docs.forEach(d => {
@@ -140,7 +141,7 @@ export default function CharacterDetail() {
           where('userId', '==', user.id),
           where('characterId', '==', id)
         );
-        const snapLike = await getDocs(qLike);
+        const snapLike = await safeGetDocs(qLike);
         setIsLiked(!snapLike.empty);
 
         const qBook = query(
@@ -149,7 +150,7 @@ export default function CharacterDetail() {
           where('targetId', '==', id),
           where('targetType', '==', 'CHARACTER')
         );
-        const snapBook = await getDocs(qBook);
+        const snapBook = await safeGetDocs(qBook);
         setIsBookmarked(!snapBook.empty);
       } catch (e) {
         console.error("Check interaction error:", e);
@@ -176,23 +177,23 @@ export default function CharacterDetail() {
         where('userId', '==', user.id),
         where('characterId', '==', character.id)
       );
-      const snap = await getDocs(q);
+      const snap = await safeGetDocs(q);
       const charRef = doc(db, 'characters', character.id);
 
       if (!snap.empty) {
         for (const d of snap.docs) {
-          await deleteDoc(doc(db, 'character_likes', d.id));
+          await safeDeleteDoc(doc(db, 'character_likes', d.id));
         }
-        await updateDoc(charRef, { likesCount: increment(-1) });
+        await safeUpdateDoc(charRef, { likesCount: increment(-1) });
         setIsLiked(false);
         setLikesCount(prev => Math.max(0, prev - 1));
       } else {
-        await addDoc(collection(db, 'character_likes'), {
+        await safeAddDoc(collection(db, 'character_likes'), {
           userId: user.id,
           characterId: character.id,
           createdAt: serverTimestamp()
         });
-        await updateDoc(charRef, { likesCount: increment(1) });
+        await safeUpdateDoc(charRef, { likesCount: increment(1) });
         setIsLiked(true);
         setLikesCount(prev => prev + 1);
         toast.success("Đã thích Character!");
@@ -225,24 +226,24 @@ export default function CharacterDetail() {
         where('targetId', '==', character.id),
         where('targetType', '==', 'CHARACTER')
       );
-      const snap = await getDocs(q);
+      const snap = await safeGetDocs(q);
       const charRef = doc(db, 'characters', character.id);
 
       if (!snap.empty) {
         for (const d of snap.docs) {
-          await deleteDoc(doc(db, 'bookmarks', d.id));
+          await safeDeleteDoc(doc(db, 'bookmarks', d.id));
         }
-        await updateDoc(charRef, { savesCount: increment(-1) });
+        await safeUpdateDoc(charRef, { savesCount: increment(-1) });
         setIsBookmarked(false);
         setSavesCount(prev => Math.max(0, prev - 1));
       } else {
-        await addDoc(collection(db, 'bookmarks'), {
+        await safeAddDoc(collection(db, 'bookmarks'), {
           userId: user.id,
           targetId: character.id,
           targetType: 'CHARACTER',
           createdAt: serverTimestamp()
         });
-        await updateDoc(charRef, { savesCount: increment(1) });
+        await safeUpdateDoc(charRef, { savesCount: increment(1) });
         setIsBookmarked(true);
         setSavesCount(prev => prev + 1);
         toast.success("Đã lưu Character vào bộ sưu tập!");
@@ -275,7 +276,7 @@ export default function CharacterDetail() {
 
     try {
       const charRef = doc(db, 'characters', character.id);
-      await updateDoc(charRef, { deletedAt: new Date().toISOString() });
+      await safeUpdateDoc(charRef, { deletedAt: new Date().toISOString() });
       toast.success("Đã xóa Character.");
       navigate('/characters');
     } catch (err) {

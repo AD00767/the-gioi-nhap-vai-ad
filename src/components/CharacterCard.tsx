@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, Bookmark, Eye, ExternalLink, Sparkles, User as UserIcon, Tag, MessageSquare, X, Flag } from 'lucide-react';
-import { doc, updateDoc, increment, collection, addDoc, query, where, getDocs, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, increment, collection, query, where, serverTimestamp } from 'firebase/firestore';
+import { safeGetDoc, safeGetDocs, safeAddDoc, safeUpdateDoc, safeDeleteDoc } from '../lib/firestoreUtils';
 import { db } from '../lib/firebase';
 import { useAuthStore } from '../store/useAuthStore';
 import { CharacterItem } from '../types';
@@ -41,7 +42,7 @@ export default function CharacterCard({ character, onUpdate }: CharacterCardProp
           where('userId', '==', user.id),
           where('characterId', '==', character.id)
         );
-        const snapLike = await getDocs(qLike);
+        const snapLike = await safeGetDocs(qLike);
         setIsLiked(!snapLike.empty);
 
         // Bookmark check
@@ -51,7 +52,7 @@ export default function CharacterCard({ character, onUpdate }: CharacterCardProp
           where('targetId', '==', character.id),
           where('targetType', '==', 'CHARACTER')
         );
-        const snapBook = await getDocs(qBook);
+        const snapBook = await safeGetDocs(qBook);
         setIsBookmarked(!snapBook.empty);
       } catch (err) {
         console.error("Check interaction error:", err);
@@ -74,30 +75,30 @@ export default function CharacterCard({ character, onUpdate }: CharacterCardProp
         where('userId', '==', user.id),
         where('characterId', '==', character.id)
       );
-      const snap = await getDocs(q);
+      const snap = await safeGetDocs(q);
       const charRef = doc(db, 'characters', character.id);
 
       if (!snap.empty) {
         for (const d of snap.docs) {
-          await deleteDoc(doc(db, 'character_likes', d.id));
+          await safeDeleteDoc(doc(db, 'character_likes', d.id));
         }
-        await updateDoc(charRef, { likesCount: increment(-1) });
+        await safeUpdateDoc(charRef, { likesCount: increment(-1) });
         setIsLiked(false);
         setLikesCount(prev => Math.max(0, prev - 1));
       } else {
-        await addDoc(collection(db, 'character_likes'), {
+        await safeAddDoc(collection(db, 'character_likes'), {
           userId: user.id,
           characterId: character.id,
           createdAt: serverTimestamp()
         });
-        await updateDoc(charRef, { likesCount: increment(1) });
+        await safeUpdateDoc(charRef, { likesCount: increment(1) });
         setIsLiked(true);
         setLikesCount(prev => prev + 1);
         toast.success("Đã thích Character!");
 
         // Gửi thông báo đến Creator
         if (character.creatorId && character.creatorId !== user.id) {
-          await addDoc(collection(db, 'notifications'), {
+          await safeAddDoc(collection(db, 'notifications'), {
             recipientId: character.creatorId,
             senderId: user.id,
             senderName: user.displayName || 'Người dùng',
@@ -141,31 +142,31 @@ export default function CharacterCard({ character, onUpdate }: CharacterCardProp
         where('targetId', '==', character.id),
         where('targetType', '==', 'CHARACTER')
       );
-      const snap = await getDocs(q);
+      const snap = await safeGetDocs(q);
       const charRef = doc(db, 'characters', character.id);
 
       if (!snap.empty) {
         for (const d of snap.docs) {
-          await deleteDoc(doc(db, 'bookmarks', d.id));
+          await safeDeleteDoc(doc(db, 'bookmarks', d.id));
         }
-        await updateDoc(charRef, { savesCount: increment(-1) });
+        await safeUpdateDoc(charRef, { savesCount: increment(-1) });
         setIsBookmarked(false);
         setSavesCount(prev => Math.max(0, prev - 1));
       } else {
-        await addDoc(collection(db, 'bookmarks'), {
+        await safeAddDoc(collection(db, 'bookmarks'), {
           userId: user.id,
           targetId: character.id,
           targetType: 'CHARACTER',
           createdAt: serverTimestamp()
         });
-        await updateDoc(charRef, { savesCount: increment(1) });
+        await safeUpdateDoc(charRef, { savesCount: increment(1) });
         setIsBookmarked(true);
         setSavesCount(prev => prev + 1);
         toast.success("Đã lưu Character vào bộ sưu tập!");
 
         // Gửi thông báo đến Creator
         if (character.creatorId && character.creatorId !== user.id) {
-          await addDoc(collection(db, 'notifications'), {
+          await safeAddDoc(collection(db, 'notifications'), {
             recipientId: character.creatorId,
             senderId: user.id,
             senderName: user.displayName || 'Người dùng',

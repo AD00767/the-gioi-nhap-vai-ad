@@ -5,7 +5,9 @@ import { motion } from 'motion/react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSeo } from '../hooks/useSeo';
 import { db } from '../lib/firebase';
-import { collection, query, where, limit, getDocs, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, query, where, limit, doc, updateDoc, increment } from 'firebase/firestore';
+import { safeGetDocs, safeUpdateDoc } from '../lib/firestoreUtils';
+import * as localDb from '../lib/localDb';
 import toast from 'react-hot-toast';
 import { parseIdQuery, lookupIdInFirebase, ExactIdLookupResult } from '../lib/searchUtils';
 
@@ -75,7 +77,7 @@ export default function AISearch() {
         body: JSON.stringify({ query: queryText })
       });
       
-      const parsedCriteria = res.parsedCriteria || {};
+      const parsedCriteria = (res as any)?.parsedCriteria || {};
       setCriteria(parsedCriteria);
 
       // 1. Fetch Characters
@@ -83,10 +85,14 @@ export default function AISearch() {
       if (parsedCriteria.gender) {
         charQuery = query(charQuery, where("gender", "==", parsedCriteria.gender));
       }
-      const charSnap = await getDocs(query(charQuery, limit(50)));
+      const charSnap = await safeGetDocs(query(charQuery, limit(50)));
       let fetchedCharacters = charSnap.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .map((doc: any) => ({ id: doc.id, ...doc.data() }))
         .filter((c: any) => !c.deletedAt && !c.isHidden);
+
+      if (fetchedCharacters.length === 0) {
+        fetchedCharacters = localDb.getAllCharacters().filter((c: any) => !c.deletedAt && !c.isHidden) as any[];
+      }
 
       if (parsedCriteria.keywords && parsedCriteria.keywords.length > 0) {
         fetchedCharacters = fetchedCharacters.filter((char: any) => 
@@ -103,10 +109,14 @@ export default function AISearch() {
       }
 
       // 2. Fetch Prompts
-      const promptSnap = await getDocs(query(collection(db, "prompts"), limit(50)));
+      const promptSnap = await safeGetDocs(query(collection(db, "prompts"), limit(50)));
       let fetchedPrompts = promptSnap.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .map((doc: any) => ({ id: doc.id, ...doc.data() }))
         .filter((p: any) => !p.deletedAt && !p.isHidden);
+
+      if (fetchedPrompts.length === 0) {
+        fetchedPrompts = localDb.getAllPrompts().filter((p: any) => !p.deletedAt && !p.isHidden) as any[];
+      }
 
       if (parsedCriteria.keywords && parsedCriteria.keywords.length > 0) {
         fetchedPrompts = fetchedPrompts.filter((prompt: any) => 
@@ -124,10 +134,14 @@ export default function AISearch() {
       }
 
       // 3. Fetch Creators
-      const creatorSnap = await getDocs(query(collection(db, "users"), limit(50)));
+      const creatorSnap = await safeGetDocs(query(collection(db, "users"), limit(50)));
       let fetchedCreators = creatorSnap.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter((u: any) => u.creatorStatus === true && !u.deletedAt && !u.isLocked && !u.isHidden);
+        .map((doc: any) => ({ id: doc.id, ...doc.data() }))
+        .filter((u: any) => u.role !== 'ADMIN' && u.creatorStatus === true && !u.deletedAt && !u.isLocked && !u.isHidden);
+
+      if (fetchedCreators.length === 0) {
+        fetchedCreators = localDb.getAllUsers().filter((u: any) => u.role !== 'ADMIN' && u.creatorStatus === true && !u.deletedAt && !u.isLocked && !u.isHidden) as any[];
+      }
 
       if (parsedCriteria.keywords && parsedCriteria.keywords.length > 0) {
         fetchedCreators = fetchedCreators.filter((creator: any) => 
@@ -474,7 +488,7 @@ export default function AISearch() {
                     transition={{ delay: i * 0.05 }}
                     key={item.id}
                   >
-                    <Link to={`/characters/${item.id}`} className="group p-4 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-all flex gap-4 h-full">
+                    <Link to={`/character/${item.id}`} className="group p-4 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-all flex gap-4 h-full">
                       <img src={item.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${item.name}`} className="w-20 h-20 rounded-xl object-cover bg-neutral-100 dark:bg-neutral-800 shrink-0 border border-neutral-200 dark:border-neutral-700" alt={item.name} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
@@ -526,7 +540,7 @@ export default function AISearch() {
                   >
                     <div>
                       <div className="flex items-start justify-between gap-2">
-                        <Link to={`/prompts/${item.id}`} className="font-bold text-lg hover:text-blue-500 transition-colors line-clamp-1">
+                        <Link to={`/prompt/${item.id}`} className="font-bold text-lg hover:text-blue-500 transition-colors line-clamp-1">
                           {item.title || item.name}
                         </Link>
                         {item.numericId && (
@@ -537,7 +551,7 @@ export default function AISearch() {
                       <p className="text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2 mt-2">{item.purpose}</p>
                     </div>
 
-                    <div className="flex items-center justify-between pt-4 mt-4 border-t border-neutral-100 dark:border-neutral-800">
+                    <div className="flex items-center justify-between pt-4 mt-4 border-t border-t-neutral-100 dark:border-t-neutral-800">
                       <span className="text-xs text-neutral-500">Đã chép: {item.copyCount || 0} lượt</span>
                       <div className="flex items-center gap-2">
                         <button
@@ -548,7 +562,7 @@ export default function AISearch() {
                           <span>{copiedPromptId === item.id ? "Đã chép" : "Sao chép"}</span>
                         </button>
                         <Link 
-                          to={`/prompts/${item.id}`}
+                          to={`/prompt/${item.id}`}
                           className="px-3 py-1.5 bg-black dark:bg-white text-white dark:text-black rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity"
                         >
                           Chi tiết

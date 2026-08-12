@@ -7,6 +7,9 @@ import {
   doc, updateDoc, increment, collection, addDoc, query, where, getDocs, deleteDoc, serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { 
+  safeGetDocs, safeAddDoc, safeDeleteDoc, safeUpdateDoc 
+} from '../lib/firestoreUtils';
 import { useAuthStore } from '../store/useAuthStore';
 import { PromptItem } from '../types';
 import CommentSection from './comments/CommentSection';
@@ -50,7 +53,7 @@ export default function PromptCard({ prompt, onEdit, onDelete, onPin, isOwner }:
           where('targetId', '==', prompt.id),
           where('targetType', '==', 'PROMPT')
         );
-        const snap = await getDocs(q);
+        const snap = await safeGetDocs(q);
         setIsBookmarked(!snap.empty);
       } catch (e) {
         console.error("Check bookmark error:", e);
@@ -69,11 +72,11 @@ export default function PromptCard({ prompt, onEdit, onDelete, onPin, isOwner }:
       // Update Firestore copy count
       try {
         const promptRef = doc(db, 'prompts', prompt.id);
-        await updateDoc(promptRef, {
+        await safeUpdateDoc(promptRef, {
           copyCount: increment(1)
         });
       } catch (dbErr) {
-        console.warn("Could not update copyCount in db:", dbErr);
+        console.log("Could not update copyCount in db:", dbErr);
       }
       setCopyCount(prev => prev + 1);
 
@@ -99,39 +102,39 @@ export default function PromptCard({ prompt, onEdit, onDelete, onPin, isOwner }:
         where('targetId', '==', prompt.id),
         where('targetType', '==', 'PROMPT')
       );
-      const snap = await getDocs(q);
+      const snap = await safeGetDocs(q);
 
       const promptRef = doc(db, 'prompts', prompt.id);
 
       if (!snap.empty) {
         // Remove bookmark
         for (const bDoc of snap.docs) {
-          await deleteDoc(doc(db, 'bookmarks', bDoc.id));
+          await safeDeleteDoc(doc(db, 'bookmarks', bDoc.id));
         }
         try {
-          await updateDoc(promptRef, {
+          await safeUpdateDoc(promptRef, {
             savesCount: increment(-1)
           });
         } catch (dbErr) {
-          console.warn("Could not update savesCount in db:", dbErr);
+          console.log("Could not update savesCount in db:", dbErr);
         }
         setIsBookmarked(false);
         setSavesCount(prev => Math.max(0, prev - 1));
         toast.success("Đã bỏ lưu Prompt.");
       } else {
         // Add bookmark
-        await addDoc(collection(db, 'bookmarks'), {
+        await safeAddDoc(collection(db, 'bookmarks'), {
           userId: user.id,
           targetId: prompt.id,
           targetType: 'PROMPT',
           createdAt: serverTimestamp()
         });
         try {
-          await updateDoc(promptRef, {
+          await safeUpdateDoc(promptRef, {
             savesCount: increment(1)
           });
         } catch (dbErr) {
-          console.warn("Could not update savesCount in db:", dbErr);
+          console.log("Could not update savesCount in db:", dbErr);
         }
         setIsBookmarked(true);
         setSavesCount(prev => prev + 1);
@@ -140,7 +143,7 @@ export default function PromptCard({ prompt, onEdit, onDelete, onPin, isOwner }:
         // Gửi thông báo đến Tác giả Prompt
         if (prompt.authorId && prompt.authorId !== user.id) {
           try {
-            await addDoc(collection(db, 'notifications'), {
+            await safeAddDoc(collection(db, 'notifications'), {
               recipientId: prompt.authorId,
               senderId: user.id,
               senderName: user.displayName || 'Người dùng',
@@ -154,7 +157,7 @@ export default function PromptCard({ prompt, onEdit, onDelete, onPin, isOwner }:
               createdAt: new Date().toISOString()
             });
           } catch (notifErr) {
-            console.warn("Could not create notification for prompt bookmark:", notifErr);
+            console.log("Could not create notification for prompt bookmark:", notifErr);
           }
         }
       }

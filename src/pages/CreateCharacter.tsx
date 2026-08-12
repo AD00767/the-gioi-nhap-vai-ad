@@ -263,7 +263,7 @@ export default function CreateCharacter() {
           setAuth(firebaseUser, { ...user, creatorStatus: true });
           localStorage.setItem('cached_creator_status', 'true');
         } catch (uErr) {
-          console.warn("Notice: Failed to update user creatorStatus:", uErr);
+          console.log("Notice: Failed to update user creatorStatus:", uErr);
         }
 
         // Send notifications to followers

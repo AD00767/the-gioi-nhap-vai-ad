@@ -5,30 +5,41 @@
 
 export interface User {
   id: string;
-  numericId: string;
+  uid?: string;
+  numericId?: string;
   email: string;
   password?: string;
   displayName: string;
   avatar: string;
+  photoURL?: string;
   bio: string;
+  statusMessage?: string;
+  creatorRequestStatus?: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
   socialLinks: {
     facebook?: string;
     instagram?: string;
     tiktok?: string;
     discord?: string;
+    customLinks?: { label: string; url: string }[];
   };
-  role: 'ADMIN' | 'USER' | 'MOD' | 'MODERATOR';
+  customLinks?: { label: string; url: string }[];
+  role: 'ADMIN' | 'USER' | 'MOD' | 'MODERATOR' | string;
   creatorStatus: boolean;
   isLocked: boolean;
   lockReason?: string;
-  strikeCount: number;
-  badges: string[];
-  permissions: string[];
+  strikeCount?: number;
+  badges?: string[];
+  permissions?: string[];
   themePreference?: 'LIGHT' | 'DARK' | 'SYSTEM';
   followerCount?: number;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
+  characterCount?: number;
+  promptCount?: number;
+  totalLikes?: number;
+  totalSaves?: number;
+  moderatorInviteStatus?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  deletedAt?: string | null;
 }
 
 export interface Character {
@@ -185,7 +196,7 @@ function getStorage<T>(key: string, defaultValue: T): T {
     const data = localStorage.getItem(key);
     return data ? JSON.parse(data) : defaultValue;
   } catch (e) {
-    console.warn(`Error reading ${key} from localStorage:`, e);
+    console.log(`Error reading ${key} from localStorage:`, e);
     return defaultValue;
   }
 }
@@ -195,240 +206,19 @@ function setStorage<T>(key: string, value: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (e) {
-    console.warn(`Error writing ${key} to localStorage:`, e);
+    console.log(`Error writing ${key} to localStorage:`, e);
   }
 }
 
-// --- INITIAL SEEDING ---
+// --- INITIAL SEEDING & CLEANUP ---
 export function initLocalDb(): void {
-  const now = new Date().toISOString();
-
-  // 1. Seed Users if empty
+  // Load existing data
   const existingUsers = getStorage<User[]>(STORAGE_KEYS.USERS, []);
-  if (existingUsers.length === 0) {
-    const seedUsers: User[] = [
-      {
-        id: 'user_admin',
-        numericId: '100000001',
-        email: 'nhuochy259@gmail.com',
-        password: 'admin123password',
-        displayName: 'Admin Quản Trị Viên',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AdminApp',
-        bio: 'Quản trị viên hệ thống Thế giới nhập vai_AD.',
-        socialLinks: { facebook: 'https://facebook.com', discord: 'https://discord.gg' },
-        role: 'ADMIN',
-        creatorStatus: true,
-        isLocked: false,
-        strikeCount: 0,
-        badges: ['SÁNG TẠO NỔI BẬT', 'ADMIN HỆ THỐNG'],
-        permissions: ['ALL'],
-        followerCount: 28,
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      },
-      {
-        id: 'user_creator_1',
-        numericId: '100000002',
-        email: 'creator1@thegioinhapvai.ad',
-        password: 'creator123password',
-        displayName: 'Thanh Vũ Roleplay',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ThanhVu',
-        bio: 'Tác giả chuyên sáng tạo các Character huyền huyễn, tiên hiệp và cổ đại sâu sắc cho Google AI Studio.',
-        socialLinks: { tiktok: 'https://tiktok.com/@thanhvu' },
-        role: 'USER',
-        creatorStatus: true,
-        isLocked: false,
-        strikeCount: 0,
-        badges: ['SÁNG TẠO NỔI BẬT'],
-        permissions: [],
-        followerCount: 15,
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      },
-      {
-        id: 'user_creator_2',
-        numericId: '100000003',
-        email: 'creator2@thegioinhapvai.ad',
-        password: 'creator123password',
-        displayName: 'Linh Nhi RP',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=LinhNhi',
-        bio: 'Sáng tạo các Prompt và Character phong cách học đường, hiện đại ngọt ngào và chữa lành.',
-        socialLinks: { instagram: 'https://instagram.com' },
-        role: 'USER',
-        creatorStatus: true,
-        isLocked: false,
-        strikeCount: 0,
-        badges: [],
-        permissions: [],
-        followerCount: 9,
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      },
-    ];
-    setStorage(STORAGE_KEYS.USERS, seedUsers);
-  }
 
-  // 2. Seed Characters if empty
-  const existingChars = getStorage<Character[]>(STORAGE_KEYS.CHARACTERS, []);
-  if (existingChars.length === 0) {
-    const seedChars: Character[] = [
-      {
-        id: 'char_1',
-        numericId: '200000001',
-        name: 'Thánh Nữ Tuyết Sơn - Băng Nguyệt',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-        gender: 'Nữ',
-        slogan: 'Nguyện mang tâm lạnh che chở nhân gian, dẫu thân tan hồn nát...',
-        plot: 'Băng Nguyệt là Thánh nữ đời thứ 9 của Tuyết Sơn Điện, mang trong mình Băng Linh Thể hiếm có nghìn năm. Nàng có vẻ ngoài lạnh lùng, xa cách nhưng nội tâm ấm áp, luôn âm thầm bảo vệ nhân gian khỏi sự xâm lăng của Ma giới.',
-        characterLink: 'https://aistudio.google.com/app/prompts/new_chat',
-        creatorId: 'user_creator_1',
-        creatorName: 'Thanh Vũ Roleplay',
-        creatorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ThanhVu',
-        tags: ['Huyền Huyễn', 'Tiên Hiệp', 'Nữ Chính', 'Lạnh Lùng'],
-        category: 'Huyền Huyễn',
-        views: 1240,
-        likes: ['user_admin'],
-        saves: ['user_admin'],
-        isPinned: true,
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      },
-      {
-        id: 'char_2',
-        numericId: '200000002',
-        name: 'Tổng Tài Lạnh Lùng - Cố Dực',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
-        gender: 'Nam',
-        slogan: 'Anh không quan tâm cả thế giới nghĩ gì, anh chỉ cần em ở bên cạnh.',
-        plot: 'Cố Dực là Chủ tịch Tập đoàn Cố Thị, người đàn ông quyền lực nhất thương trường. Quyết đoán, sắc bén nhưng vô cùng thâm tình khi đối diện với người mình yêu thương.',
-        characterLink: 'https://aistudio.google.com/app/prompts/new_chat',
-        creatorId: 'user_creator_2',
-        creatorName: 'Linh Nhi RP',
-        creatorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=LinhNhi',
-        tags: ['Hiện Đại', 'Tổng Tài', 'Nam Chính', 'Ngôn Tình'],
-        category: 'Hiện Đại',
-        views: 980,
-        likes: ['user_creator_1'],
-        saves: ['user_creator_1'],
-        isPinned: true,
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      },
-      {
-        id: 'char_3',
-        numericId: '200000003',
-        name: 'Thầy Giáo Lịch Sử - Hoàng Nam',
-        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
-        gender: 'Nam',
-        slogan: 'Mỗi trang sử là một câu chuyện tình ca chưa kể...',
-        plot: 'Hoàng Nam là giáo viên Lịch sử trẻ tuổi tại trường THPT Chuyên. Điềm tĩnh, trí thức, luôn lắng nghe và thấu hiểu học sinh.',
-        characterLink: 'https://aistudio.google.com/app/prompts/new_chat',
-        creatorId: 'user_creator_2',
-        creatorName: 'Linh Nhi RP',
-        creatorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=LinhNhi',
-        tags: ['Học Đường', 'Hiện Đại', 'Ấm Áp'],
-        category: 'Học Đường',
-        views: 650,
-        likes: [],
-        saves: [],
-        isPinned: false,
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      },
-    ];
-    setStorage(STORAGE_KEYS.CHARACTERS, seedChars);
-  }
+  // Filter out any hardcoded 'user_admin' seed accounts to ensure only genuine users exist
+  const cleanedUsers = existingUsers.filter(u => u.id !== 'user_admin' && u.email.toLowerCase() !== 'nhuochy259@gmail.com' || u.id !== 'user_admin');
 
-  // 3. Seed Prompts if empty
-  const existingPrompts = getStorage<Prompt[]>(STORAGE_KEYS.PROMPTS, []);
-  if (existingPrompts.length === 0) {
-    const seedPrompts: Prompt[] = [
-      {
-        id: 'prompt_1',
-        numericId: '300000001',
-        name: 'System Prompt Định Hình Nhân Vật Phản Diện Đa Chiều',
-        purpose: 'Hướng dẫn Gemini tạo nhân vật phản diện thông minh, sắc bén và không rập khuôn.',
-        content: `You are an expert AI roleplay companion specialized in dark fantasy antagonist personas.
-Guidelines:
-1. Stay strictly in character without breaking the fourth wall.
-2. Use descriptive, atmospheric sensory details.
-3. React dynamically to the user's emotional tone.`,
-        authorId: 'user_creator_1',
-        authorName: 'Thanh Vũ Roleplay',
-        authorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ThanhVu',
-        tags: ['RP', 'World Building', 'Character'],
-        category: 'RP',
-        views: 1890,
-        copyCount: 142,
-        bookmarks: ['user_admin'],
-        isPinned: true,
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      },
-      {
-        id: 'prompt_2',
-        numericId: '300000002',
-        name: 'Prompt Tạo Cuộc Hội Thoại Học Đường Tự Nhiên',
-        purpose: 'Tối ưu hóa các đoạn hội thoại thường ngày trong Roleplay học đường.',
-        content: `Tùy chỉnh hệ thống phản hồi của AI theo văn phong tuổi học trò, nhẹ nhàng và tự nhiên.
-Yêu cầu:
-- Sử dụng ngôn từ thân thiện, tự nhiên.
-- Mô tả chi tiết hành động và biểu cảm khuôn mặt.`,
-        authorId: 'user_creator_2',
-        authorName: 'Linh Nhi RP',
-        authorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=LinhNhi',
-        tags: ['Học Đường', 'RP'],
-        category: 'RP',
-        views: 920,
-        copyCount: 68,
-        bookmarks: [],
-        isPinned: true,
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      },
-    ];
-    setStorage(STORAGE_KEYS.PROMPTS, seedPrompts);
-  }
-
-  // 4. Seed Feedbacks if empty
-  const existingFeedbacks = getStorage<Feedback[]>(STORAGE_KEYS.FEEDBACKS, []);
-  if (existingFeedbacks.length === 0) {
-    const seedFeedbacks: Feedback[] = [
-      {
-        id: 'feedback_1',
-        senderId: 'user_creator_2',
-        senderName: 'Linh Nhi RP',
-        senderAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=LinhNhi',
-        recipientId: 'user_admin',
-        recipientName: 'Admin Quản Trị Viên',
-        mode: 'PUBLIC',
-        title: 'Cảm ơn giao diện tìm kiếm AI mượt mà!',
-        content: 'Cộng đồng Thế giới nhập vai_AD thiết kế rất mượt và đẹp mắt. Rất mong hệ thống ngày càng phát triển!',
-        reactions: { user_admin: '❤️' },
-        replies: [
-          {
-            id: 'reply_1',
-            senderId: 'user_admin',
-            senderName: 'Admin Quản Trị Viên',
-            senderAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AdminApp',
-            content: 'Cảm ơn bạn rất nhiều! BQT sẽ luôn hoàn thiện hệ thống tốt hơn nữa.',
-            createdAt: now,
-          },
-        ],
-        createdAt: now,
-        deletedAt: null,
-      },
-    ];
-    setStorage(STORAGE_KEYS.FEEDBACKS, seedFeedbacks);
-  }
+  setStorage(STORAGE_KEYS.USERS, cleanedUsers);
 }
 
 // Call init on module import
@@ -781,6 +571,18 @@ export function addFeedbackReply(feedbackId: string, reply: { senderId: string; 
   return list[idx];
 }
 
+export function updateFeedback(id: string, updates: Partial<Feedback>): Feedback | null {
+  const list = getStorage<Feedback[]>(STORAGE_KEYS.FEEDBACKS, []);
+  const idx = list.findIndex(f => f.id === id);
+  if (idx === -1) return null;
+  list[idx] = {
+    ...list[idx],
+    ...updates,
+  };
+  setStorage(STORAGE_KEYS.FEEDBACKS, list);
+  return list[idx];
+}
+
 export function deleteFeedback(id: string): boolean {
   const list = getStorage<Feedback[]>(STORAGE_KEYS.FEEDBACKS, []);
   const idx = list.findIndex(f => f.id === id);
@@ -810,6 +612,19 @@ export function createComment(cData: Omit<Comment, 'id' | 'createdAt' | 'updated
   comments.push(newC);
   setStorage(STORAGE_KEYS.COMMENTS, comments);
   return newC;
+}
+
+export function updateComment(id: string, updates: Partial<Comment>): Comment | null {
+  const comments = getStorage<Comment[]>(STORAGE_KEYS.COMMENTS, []);
+  const idx = comments.findIndex(c => c.id === id);
+  if (idx === -1) return null;
+  comments[idx] = {
+    ...comments[idx],
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  };
+  setStorage(STORAGE_KEYS.COMMENTS, comments);
+  return comments[idx];
 }
 
 export function deleteComment(id: string): boolean {
@@ -875,6 +690,107 @@ export function getFollowerCount(creatorId: string): number {
   return follows.filter(f => f.creatorId === creatorId).length;
 }
 
+export function getAllComments(): Comment[] {
+  return getStorage<Comment[]>(STORAGE_KEYS.COMMENTS, []);
+}
+
+export function getAllBookmarks(): Bookmark[] {
+  return getStorage<Bookmark[]>(STORAGE_KEYS.BOOKMARKS, []);
+}
+
+export function createBookmark(data: any): Bookmark {
+  const bookmarks = getStorage<Bookmark[]>(STORAGE_KEYS.BOOKMARKS, []);
+  const newB: Bookmark = {
+    id: data.id || 'bookmark_' + Math.random().toString(36).substring(2, 9),
+    userId: data.userId || '',
+    itemType: data.itemType || 'character',
+    itemId: data.itemId || '',
+    createdAt: data.createdAt || new Date().toISOString(),
+  };
+  bookmarks.push(newB);
+  setStorage(STORAGE_KEYS.BOOKMARKS, bookmarks);
+
+  // Sync to underlying Character or Prompt saves/bookmarks arrays!
+  if (newB.itemType === 'character') {
+    const char = getCharacterById(newB.itemId);
+    if (char) {
+      const saves = Array.from(new Set([...(char.saves || []), newB.userId]));
+      updateCharacter(newB.itemId, { saves });
+    }
+  } else if (newB.itemType === 'prompt') {
+    const prompt = getPromptById(newB.itemId);
+    if (prompt) {
+      const bmarks = Array.from(new Set([...(prompt.bookmarks || []), newB.userId]));
+      updatePrompt(newB.itemId, { bookmarks: bmarks });
+    }
+  }
+
+  return newB;
+}
+
+export function deleteBookmark(id: string): boolean {
+  const bookmarks = getStorage<Bookmark[]>(STORAGE_KEYS.BOOKMARKS, []);
+  const idx = bookmarks.findIndex(b => b.id === id);
+  if (idx === -1) return false;
+  const b = bookmarks[idx];
+  bookmarks.splice(idx, 1);
+  setStorage(STORAGE_KEYS.BOOKMARKS, bookmarks);
+
+  // Sync back to Character or Prompt saves/bookmarks arrays
+  if (b.itemType === 'character') {
+    const char = getCharacterById(b.itemId);
+    if (char) {
+      const saves = (char.saves || []).filter(uid => uid !== b.userId);
+      updateCharacter(b.itemId, { saves });
+    }
+  } else if (b.itemType === 'prompt') {
+    const prompt = getPromptById(b.itemId);
+    if (prompt) {
+      const bmarks = (prompt.bookmarks || []).filter(uid => uid !== b.userId);
+      updatePrompt(b.itemId, { bookmarks: bmarks });
+    }
+  }
+
+  return true;
+}
+
+export function getAllFollows(): Follow[] {
+  return getStorage<Follow[]>(STORAGE_KEYS.FOLLOWS, []);
+}
+
+export function createFollow(data: any): Follow {
+  const follows = getStorage<Follow[]>(STORAGE_KEYS.FOLLOWS, []);
+  const newF: Follow = {
+    id: data.id || `${data.followerId}_${data.creatorId}`,
+    followerId: data.followerId || '',
+    creatorId: data.creatorId || '',
+    followerName: data.followerName || '',
+    followerAvatar: data.followerAvatar || '',
+    createdAt: data.createdAt || new Date().toISOString(),
+  };
+  follows.push(newF);
+  setStorage(STORAGE_KEYS.FOLLOWS, follows);
+
+  const count = getFollowerCount(newF.creatorId);
+  updateUser(newF.creatorId, { followerCount: count });
+
+  return newF;
+}
+
+export function deleteFollow(id: string): boolean {
+  const follows = getStorage<Follow[]>(STORAGE_KEYS.FOLLOWS, []);
+  const idx = follows.findIndex(f => f.id === id || `${f.followerId}_${f.creatorId}` === id);
+  if (idx === -1) return false;
+  const f = follows[idx];
+  follows.splice(idx, 1);
+  setStorage(STORAGE_KEYS.FOLLOWS, follows);
+
+  const count = getFollowerCount(f.creatorId);
+  updateUser(f.creatorId, { followerCount: count });
+
+  return true;
+}
+
 export function getFollowedCreators(followerId: string): User[] {
   const follows = getStorage<Follow[]>(STORAGE_KEYS.FOLLOWS, []);
   const creatorIds = follows.filter(f => f.followerId === followerId).map(f => f.creatorId);
@@ -883,8 +799,12 @@ export function getFollowedCreators(followerId: string): User[] {
 }
 
 // --- NOTIFICATIONS ---
+export function getAllNotifications(): NotificationItem[] {
+  return getStorage<NotificationItem[]>(STORAGE_KEYS.NOTIFICATIONS, []);
+}
+
 export function getUserNotifications(userId: string): NotificationItem[] {
-  const notifs = getStorage<NotificationItem[]>(STORAGE_KEYS.NOTIFICATIONS, []);
+  const notifs = getAllNotifications();
   return notifs.filter(n => n.userId === userId || n.recipientId === userId);
 }
 

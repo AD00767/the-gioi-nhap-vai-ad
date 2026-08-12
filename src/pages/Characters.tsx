@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   Users, Search, Plus, Sparkles, Filter, RefreshCw, Flame, Clock, Calendar, ArrowUpDown
 } from 'lucide-react';
-import { collection, query, getDocs, limit } from 'firebase/firestore';
+import { collection, query, limit } from 'firebase/firestore';
+import { safeGetDocs } from '../lib/firestoreUtils';
+import * as localDb from '../lib/localDb';
 import { db } from '../lib/firebase';
 import { useAuthStore } from '../store/useAuthStore';
 import { useSeo } from '../hooks/useSeo';
@@ -38,83 +40,26 @@ export default function Characters() {
   const fetchCharacters = async () => {
     setLoading(true);
     try {
-      const snap = await getDocs(query(collection(db, 'characters'), limit(100)));
+      const snap = await safeGetDocs(query(collection(db, 'characters'), limit(100)));
       const list: CharacterItem[] = [];
 
-      snap.docs.forEach(docSnap => {
+      snap.docs.forEach((docSnap: any) => {
         const data = docSnap.data();
         if (!data.deletedAt) {
           list.push({ id: docSnap.id, ...data } as CharacterItem);
         }
       });
 
-      setCharacters(list);
-      localStorage.setItem('cached_characters_list', JSON.stringify(list));
-    } catch (err) {
-      console.error("Lỗi khi tải danh sách Character, khôi phục từ bộ nhớ đệm:", err);
-      const cached = localStorage.getItem('cached_characters_list');
-      if (cached) {
-        try {
-          const list = JSON.parse(cached);
-          setCharacters(list);
-          toast.success("Đang hiển thị dữ liệu Character từ bộ nhớ đệm (Offline).");
-        } catch (parseErr) {
-          console.error("Lỗi parse cache:", parseErr);
-        }
+      if (list.length === 0) {
+        const local = localDb.getAllCharacters().filter(c => !c.deletedAt);
+        setCharacters(local as CharacterItem[]);
       } else {
-        const fallbackCharacters: CharacterItem[] = [
-          {
-            id: 'char_01',
-            name: 'Kaelen - Hoàng Tử Ánh Sáng',
-            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop',
-            slogan: 'Ánh sáng luôn soi rọi con đường đúng đắn nhất.',
-            plot: 'Kaelen là hoàng tử của vương quốc Solaria, một kiếm sĩ thiên tài mang sức mạnh của mặt trời.',
-            creatorId: 'creator_01',
-            creatorName: 'Trần Minh Quân',
-            gender: 'MALE',
-            tags: ['Fantasy', 'Adventure', 'Solaria', 'Kiếm Sĩ'],
-            viewsCount: 1540,
-            likesCount: 245,
-            savesCount: 98,
-            createdAt: new Date().toISOString(),
-            numericId: '200300400'
-          },
-          {
-            id: 'char_02',
-            name: 'Airi - Sát Thủ Bóng Đêm',
-            avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=256&auto=format&fit=crop',
-            slogan: 'Trong bóng tối, tôi tìm thấy sự thật.',
-            plot: 'Airi sinh ra trong gia tộc Ninja cổ xưa, sử dụng song đao để bảo vệ bình yên cho ngôi làng của mình.',
-            creatorId: 'creator_01',
-            creatorName: 'Trần Minh Quân',
-            gender: 'FEMALE',
-            tags: ['Fantasy', 'Action', 'Ninja', 'Sát Thủ'],
-            viewsCount: 1820,
-            likesCount: 312,
-            savesCount: 120,
-            createdAt: new Date().toISOString(),
-            numericId: '200300401'
-          },
-          {
-            id: 'char_03',
-            name: 'Minh Thư - Học Sinh Lớp Trưởng',
-            avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=256&auto=format&fit=crop',
-            slogan: 'Kỷ luật là sức mạnh dẫn tới thành công.',
-            plot: 'Minh Thư là lớp trưởng lớp 12A1, luôn nghiêm túc nhưng ẩn sau là một tâm hồn ấm áp thích giúp đỡ người khác.',
-            creatorId: 'creator_02',
-            creatorName: 'Nguyễn Thị Hoa',
-            gender: 'FEMALE',
-            tags: ['Học Đường', 'Romance', 'School', 'Học Sinh'],
-            viewsCount: 940,
-            likesCount: 145,
-            savesCount: 52,
-            createdAt: new Date().toISOString(),
-            numericId: '200300402'
-          }
-        ];
-        setCharacters(fallbackCharacters);
-        toast("Không kết nối được dữ liệu. Sử dụng dữ liệu mẫu hệ thống.", { icon: '⚠️' });
+        setCharacters(list);
       }
+    } catch (err) {
+      console.log("Dùng dữ liệu Character từ bộ nhớ cục bộ:", err);
+      const local = localDb.getAllCharacters().filter(c => !c.deletedAt);
+      setCharacters(local as CharacterItem[]);
     } finally {
       setLoading(false);
     }

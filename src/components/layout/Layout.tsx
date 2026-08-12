@@ -10,18 +10,14 @@ import { loginWithGoogle, logout, db } from "../../lib/firebase";
 import { collection, query, where, onSnapshot, doc, updateDoc, getDocs } from "firebase/firestore";
 import toast from "react-hot-toast";
 import clsx from "clsx";
-import CaptchaModal from "../CaptchaModal";
 import ThemeToggle from "../ThemeToggle";
 import { applyTheme, ThemeMode } from "../../lib/themeFont";
 import { parseIdQuery, lookupIdInFirebase } from "../../lib/searchUtils";
-
-import AuthModal from "../auth/AuthModal";
 
 export default function Layout() {
   const { user, isInitialized } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<ThemeMode>(() => {
     return (localStorage.getItem('app_theme_mode') as ThemeMode) || 'SYSTEM';
   });
@@ -134,14 +130,14 @@ export default function Layout() {
       unreadRecipientIds = new Set(snapshot.docs.map(doc => doc.id));
       updateCount();
     }, (err) => {
-      console.warn("Notice: Recipient notifications listener error (quota or network):", err);
+      console.log("Notice: Recipient notifications listener error (quota or network):", err);
     });
 
     const unsubUser = onSnapshot(qUser, (snapshot) => {
       unreadUserIds = new Set(snapshot.docs.map(doc => doc.id));
       updateCount();
     }, (err) => {
-      console.warn("Notice: User notifications listener error (quota or network):", err);
+      console.log("Notice: User notifications listener error (quota or network):", err);
     });
 
     return () => {
@@ -152,8 +148,18 @@ export default function Layout() {
 
   if (!isInitialized) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
 
-  const handleLoginClick = () => {
-    setIsAuthModalOpen(true);
+  const handleLoginClick = async () => {
+    try {
+      await loginWithGoogle();
+      toast.success("Đăng nhập bằng Google thành công!");
+    } catch (err: any) {
+      if (err?.code === 'auth/popup-closed-by-user') return;
+      if (err?.code === 'auth/network-request-failed') {
+        toast.error("Không thể kết nối dịch vụ Google Auth. Vui lòng thử lại.");
+      } else {
+        toast.error("Đăng nhập không thành công. Vui lòng thử lại.");
+      }
+    }
   };
 
   const handleLogout = async () => {
@@ -195,10 +201,6 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50 flex flex-col font-sans transition-colors duration-200">
-      <AuthModal 
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-      />
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">

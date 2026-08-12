@@ -125,7 +125,7 @@ export default function Contact() {
           createdAt: new Date().toISOString()
         });
       } catch (notifErr) {
-        console.warn("Could not send admin notification (Guest):", notifErr);
+        console.log("Could not send admin notification (Guest):", notifErr);
       }
 
       setSubmittedSuccess(true);

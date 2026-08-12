@@ -3,7 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   Copy, Check, Bookmark, BookmarkCheck, ArrowLeft, Flag, AlertCircle, Eye, MessageSquare, Sparkles, Trash2, Edit3, ExternalLink, X 
 } from 'lucide-react';
-import { doc, getDoc, updateDoc, increment, collection, addDoc, query, where, getDocs, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, increment, collection, query, where, serverTimestamp } from 'firebase/firestore';
+import { safeGetDoc, safeGetDocs, safeAddDoc, safeUpdateDoc, safeDeleteDoc } from '../lib/firestoreUtils';
 import { db } from '../lib/firebase';
 import { useAuthStore } from '../store/useAuthStore';
 import { PromptItem } from '../types';
@@ -50,7 +51,7 @@ export default function PromptDetail() {
 
     try {
       const docRef = doc(db, 'prompts', id);
-      const snap = await getDoc(docRef);
+      const snap = await safeGetDoc(docRef);
 
       if (!snap.exists()) {
         setError(true);
@@ -78,7 +79,7 @@ export default function PromptDetail() {
         setViewsCount((item.viewsCount || 0) + 1);
         localStorage.setItem(storageKey, now.toString());
         try {
-          await updateDoc(docRef, { viewsCount: increment(1) });
+          await safeUpdateDoc(docRef, { viewsCount: increment(1) });
         } catch (e) {
           console.error("View count update error:", e);
         }
@@ -107,7 +108,7 @@ export default function PromptDetail() {
           where('targetId', '==', id),
           where('targetType', '==', 'PROMPT')
         );
-        const snap = await getDocs(q);
+        const snap = await safeGetDocs(q);
         setIsBookmarked(!snap.empty);
       } catch (e) {
         console.error("Check bookmark error:", e);
@@ -130,9 +131,9 @@ export default function PromptDetail() {
 
       try {
         const promptRef = doc(db, 'prompts', prompt.id);
-        await updateDoc(promptRef, { copyCount: increment(1) });
+        await safeUpdateDoc(promptRef, { copyCount: increment(1) });
       } catch (dbErr) {
-        console.warn("Could not update copyCount in db:", dbErr);
+        console.log("Could not update copyCount in db:", dbErr);
       }
       setCopyCount(prev => prev + 1);
 
@@ -157,32 +158,32 @@ export default function PromptDetail() {
         where('targetId', '==', prompt.id),
         where('targetType', '==', 'PROMPT')
       );
-      const snap = await getDocs(q);
+      const snap = await safeGetDocs(q);
       const promptRef = doc(db, 'prompts', prompt.id);
 
       if (!snap.empty) {
         for (const bDoc of snap.docs) {
-          await deleteDoc(doc(db, 'bookmarks', bDoc.id));
+          await safeDeleteDoc(doc(db, 'bookmarks', bDoc.id));
         }
         try {
-          await updateDoc(promptRef, { savesCount: increment(-1) });
+          await safeUpdateDoc(promptRef, { savesCount: increment(-1) });
         } catch (dbErr) {
-          console.warn("Could not update savesCount in db:", dbErr);
+          console.log("Could not update savesCount in db:", dbErr);
         }
         setIsBookmarked(false);
         setSavesCount(prev => Math.max(0, prev - 1));
         toast.success("Đã bỏ lưu Prompt.");
       } else {
-        await addDoc(collection(db, 'bookmarks'), {
+        await safeAddDoc(collection(db, 'bookmarks'), {
           userId: user.id,
           targetId: prompt.id,
           targetType: 'PROMPT',
           createdAt: serverTimestamp()
         });
         try {
-          await updateDoc(promptRef, { savesCount: increment(1) });
+          await safeUpdateDoc(promptRef, { savesCount: increment(1) });
         } catch (dbErr) {
-          console.warn("Could not update savesCount in db:", dbErr);
+          console.log("Could not update savesCount in db:", dbErr);
         }
         setIsBookmarked(true);
         setSavesCount(prev => prev + 1);
@@ -213,7 +214,7 @@ export default function PromptDetail() {
 
     setIsDeleting(true);
     try {
-      await deleteDoc(doc(db, 'prompts', prompt.id));
+      await safeDeleteDoc(doc(db, 'prompts', prompt.id));
       toast.success("Đã xóa hoàn toàn Prompt khỏi hệ thống!");
       navigate('/prompts');
     } catch (err) {

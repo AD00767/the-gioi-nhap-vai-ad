@@ -273,7 +273,7 @@ export default function Profile() {
       setMyAppeals(appealsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
     } catch (err) {
-      console.warn("Notice: Unable to load full user profile data (quota or network):", err);
+      console.log("Notice: Unable to load full user profile data (quota or network):", err);
     } finally {
       setLoading(false);
     }
