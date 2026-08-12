@@ -33,6 +33,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { path: '/admin/audit', label: 'Audit Log', icon: <Clock className="w-5 h-5" /> },
     { path: '/admin/managers', label: 'Quản Trị Viên', icon: <ShieldCheck className="w-5 h-5" /> },
   ] : [
+    { path: '/admin/dashboard', label: 'Thống Kê', icon: <BarChart3 className="w-5 h-5" /> },
     { path: '/admin/users', label: 'Thành Viên', icon: <Users className="w-5 h-5" /> },
     { path: '/admin/creators', label: 'Duyệt Creator', icon: <UserCheck className="w-5 h-5" /> },
     { path: '/admin/reports', label: 'Báo Cáo', icon: <AlertTriangle className="w-5 h-5" /> },

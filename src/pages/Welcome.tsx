@@ -73,7 +73,7 @@ export default function Welcome() {
               className="group relative flex items-center justify-center gap-3 px-10 py-4.5 rounded-2xl bg-black dark:bg-white text-white dark:text-black font-black text-lg sm:text-xl overflow-hidden transition-all hover:scale-[1.03] active:scale-[0.97] shadow-xl hover:shadow-neutral-400/20 dark:hover:shadow-white/10"
             >
               <Compass className="w-6 h-6 transition-transform group-hover:rotate-45" />
-              <span>KHÁM PHÁ NGAY</span>
+              <span>BẮT ĐẦU</span>
             </Link>
           </motion.div>
         </div>
