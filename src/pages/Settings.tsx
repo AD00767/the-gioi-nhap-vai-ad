@@ -120,7 +120,6 @@ export default function Settings() {
     setLoggingOut(true);
     try {
       await logout();
-      useAuthStore.getState().setAuth(null, null);
       localStorage.removeItem('app_notif_settings');
       toast.success('Đã khởi tạo lại thành công khỏi tất cả thiết bị!');
       setShowLogoutModal(false);

@@ -151,7 +151,6 @@ export default function Layout() {
 
   const handleLogout = async () => {
     await logout();
-    useAuthStore.getState().setAuth(null, null);
     toast.success("Đã khởi tạo lại.");
   };
 
